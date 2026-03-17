@@ -23,9 +23,12 @@ FORMAT:
 }
 
 RULES:
-- at least 3 choices
-- no markdown
-- no text outside JSON
+Rules:
+- Always include at least 3 choices
+- story should be immersive 3rd person narrative
+- When in combat, set inCombat to true and populate enemy with {name, enemyHp, enemyMaxHp}
+- When in shop, set shopMode to shop type like "Weaponsmith" or "PotionShop"
+- NEVER include markdown code blocks or any text outside the JSON
 `
 
 export const POST: RequestHandler = async ({ request }) => {
