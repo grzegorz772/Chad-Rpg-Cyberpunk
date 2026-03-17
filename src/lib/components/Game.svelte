@@ -62,7 +62,7 @@
 				$misc.loading = false
 				controller.abort() // Actually stop the network request
 			}
-		}, 9000)
+		}, 90000)
 
 		try {
 			const response = await fetch('/api/chat', {
