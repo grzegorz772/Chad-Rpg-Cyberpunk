@@ -25,6 +25,8 @@
 	import medievalWarriorInventory from '$lib/gamedata/gamestarters/medievalWarriorInventory.json'
 	import medievalWarriorSpells from '$lib/gamedata/gamestarters/medievalWarriorSpells.json'
 
+	import Modal from './testing/Modal.svelte'
+
 	import { CHARACTER_CLASSES, STARTING_VALUES, SHOP_CONFIG } from '$lib/config/constants'
 
 	let answer: string = ''
@@ -441,6 +443,9 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 <div>
 	<BackgroundImgs />
 
+<div class="debug-overlay">
+        <Modal /> 
+</div>
 	{#if $misc.maintenanceWindow}
 		<div class="maintenance-overlay">
 			<div class="maintenance-content">
@@ -588,6 +593,18 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 </div>
 
 <style>
+	.debug-overlay {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999; /* Musi być wyższy niż inne elementy UI */
+    pointer-events: auto; /* Upewnij się, że można w niego klikać */
+	}
+
+
+
+
+
 	.maintenance-overlay {
 		position: fixed;
 		inset: 0;
