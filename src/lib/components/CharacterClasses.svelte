@@ -22,8 +22,8 @@
 	
 	// Awatary do wyboru
 	const avatars = [
-		{ id: 'warrior', name: 'Wojownik', src: 'images/characters/warrior2.webp' },
-		{ id: 'mage', name: 'Mag', src: 'images/characters/mage2.webp' }
+		{ id: 'warrior', name: 'Wojownik', src: 'images/characters/avatar1.jpg' },
+		{ id: 'mage', name: 'Mag', src: 'images/characters/avatar2.jpg' }
 	]
 
 	// Funkcja do zarządzania punktami
