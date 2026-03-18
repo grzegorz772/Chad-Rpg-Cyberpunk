@@ -8,7 +8,7 @@
 	import { character } from '../../stores'
 
 	import medievalTavernStarter from '$lib/gamedata/gamestarters/medievalTavernStarter.json'
-
+	import WorldCreator from './WorldCreator.svelte'
 	function getRandomValueFromArray(array: any) {
 		const randomIndex = Math.floor(Math.random() * array?.length)
 		return array[randomIndex]
@@ -23,6 +23,19 @@
 
 	let gameStarterPrompt: string = ''
 	let gameModeSelected: boolean = false
+	let worldCreationMode: boolean = false
+	let customWorldPrompt: string = ''
+
+	function handleWorldCreated(event: CustomEvent) {
+		customWorldPrompt = event.detail.worldPrompt
+		worldCreationMode = false
+		gameModeSelected = true
+	}
+
+	function skipWorldCreation() {
+		worldCreationMode = false
+		gameModeSelected = true
+	}
 
 	async function handleGameMode(answer: any) {
 		const el = document.getElementById('game-start-window')
@@ -33,7 +46,7 @@
 			el.style.height = oldHeight
 		}
 
-		gameModeSelected = true
+		worldCreationMode = true
 		gameStarterPrompt = answer
 
 		await tick()
@@ -68,15 +81,20 @@
 
 <div class="start-overlay" transition:fade={{ duration: 500 }}>
 	<div class="start-window" id="game-start-window" in:fly={{ y: 30, duration: 600, delay: 200 }}>
-		{#if gameModeSelected}
-			<div class="character-select" transition:fade={{ duration: 400 }}>
-				<CharacterClasses
-					on:emittedAnswer={() => {
-						emitAnswer(gameStarterPrompt)
-					}}
-				/>
-			</div>
-		{:else}
+			{#if worldCreationMode}
+				<div class="world-creator-wrapper" transition:fade={{ duration: 400 }}>
+					<WorldCreator on:worldCreated={handleWorldCreated} />
+					<button class="skip-btn" on:click={skipWorldCreation}>SKIP TO STANDARD WORLD</button>
+				</div>
+			{:else if gameModeSelected}
+				<div class="character-select" transition:fade={{ duration: 400 }}>
+					<CharacterClasses
+						on:emittedAnswer={() => {
+							emitAnswer(customWorldPrompt || gameStarterPrompt)
+						}}
+					/>
+				</div>
+			{:else}
 			<div class="start-content" transition:fade={{ duration: 400 }}>
 				<!-- Cyberpunk Effects -->
 				<div class="grid-overlay"></div>
