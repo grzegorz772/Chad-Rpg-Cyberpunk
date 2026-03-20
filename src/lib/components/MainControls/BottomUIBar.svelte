@@ -118,6 +118,8 @@
 
 <style>
 	.bottom-bar {
+		align-items: center;
+		display: flex;
 		position: fixed;
 		top: var(--space-md);
 		right: var(--space-md);

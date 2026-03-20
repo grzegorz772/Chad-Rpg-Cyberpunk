@@ -1,5 +1,20 @@
 <script lang="ts">
-	import { onMount } from 'svelte'
+	// Eksportuj funkcje i dane mapy dla +page.svelte
+	export function getMapGrid() {
+		return mapGrid;
+	}
+
+	export function getCurrentSeed() {
+		return currentSeed;
+	}
+	export let mapData = {
+		mapGrid: [],
+		currentSeed: 0,
+		generateMap: () => {},
+		regenerateMap: () => {},
+		getMapGrid: () => mapGrid,
+		getCurrentSeed: () => currentSeed
+	};
 	import { fade, scale } from 'svelte/transition'
 	import { backOut } from 'svelte/easing'
 
@@ -28,6 +43,375 @@
 	import Modal from './testing/Modal.svelte'
 
 	import { CHARACTER_CLASSES, STARTING_VALUES, SHOP_CONFIG } from '$lib/config/constants'
+
+	import { onMount } from 'svelte'
+
+	// ===== GENERATOR MAPY =====
+	const MAP_SIZE = 20;
+	let mapGenerated = false;
+	const staticNames = [
+		{n: "Vaeloria", d: "Zapomniane miasto w chmurach"},
+		{n: "Kranz", d: "Posterunek na skraju świata"},
+		{n: "Onyx Ridge", d: "Czarne skały pełne echa"},
+		{n: "Greenfell", d: "Wiecznie zielone doliny"},
+		{n: "Ironhold", d: "Twierdza wykuta w granicie"},
+		{n: "Silvershadow", d: "Lustrzane tafle jezior"},
+		{n: "Dustmourn", d: "Piaszczyste pustkowia"},
+		{n: "Everbloom", d: "Oaza niegasnących kwiatów"},
+		{n: "Stormreach", d: "Wzgórza targane wiatrem"},
+		{n: "Nightshade", d: "Mroczny, gęsty las"},
+		{n: "Highfall", d: "Kaskady spadającej wody"},
+		{n: "Cinder Peak", d: "Wygasły wulkaniczny stożek"},
+		{n: "Mistwatch", d: "Wieża we mgle"},
+		{n: "Solitude", d: "Ciche miejsce odosobnienia"},
+		{n: "Wraithwood", d: "Szept starej puszczy"},
+		{n: "Goldleaf", d: "Jesienne gaje klonowe"},
+		{n: "Obsidian", d: "Gładka, ciemna otchłań"},
+		{n: "Frostpeak", d: "Zmarznięta iglica świata"},
+		{n: "Dawnstar", d: "Pierwszy blask poranka"},
+		{n: "Ravenloft", d: "Gniazdo czarnych kruków"}
+	];
+
+const regionSchema = {
+	"001": { 
+		type: "city", 
+		baseColor: "#b82121",
+		name: "City",
+		getColor: (x: number, y: number, seed: number) => {
+			const variation = Math.floor(Math.abs(Math.sin(x * 7 + y * 13 + seed) * 100) % 11) - 5;
+			const factor = 1 + (variation * 0.05);
+			const base = regionSchema["001"].baseColor;
+			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
+			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
+			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
+			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+		}
+	},
+	"002": { 
+		type: "plains", 
+		baseColor: "#b3f23a",
+		name: "Plains",
+		getColor: (x: number, y: number, seed: number) => {
+			const variation = Math.floor(Math.abs(Math.sin(x * 5 + y * 11 + seed * 1.3) * 100) % 11) - 5;
+			const factor = 1 + (variation * 0.05);
+			const base = regionSchema["002"].baseColor;
+			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
+			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
+			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
+			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+		}
+	},
+	"003": { 
+		type: "water", 
+		baseColor: "#0d5da8",
+		name: "Water",
+		getColor: (x: number, y: number, seed: number) => {
+			const variation = Math.floor(Math.abs(Math.sin(x * 3 + y * 9 + seed * 1.7) * 100) % 11) - 5;
+			const factor = 1 + (variation * 0.05);
+			const base = regionSchema["003"].baseColor;
+			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
+			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
+			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
+			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+		}
+	},
+	"004": { 
+		type: "desert", 
+		baseColor: "#e8b043",
+		name: "Desert",
+		getColor: (x: number, y: number, seed: number) => {
+			const variation = Math.floor(Math.abs(Math.sin(x * 11 + y * 5 + seed * 2.1) * 100) % 11) - 5;
+			const factor = 1 + (variation * 0.05);
+			const base = regionSchema["004"].baseColor;
+			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
+			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
+			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
+			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+		}
+	},
+	"005": { 
+		type: "forest", 
+		baseColor: "#427021",
+		name: "Forest",
+		getColor: (x: number, y: number, seed: number) => {
+			const variation = Math.floor(Math.abs(Math.sin(x * 8 + y * 6 + seed * 2.5) * 100) % 11) - 5;
+			const factor = 1 + (variation * 0.05);
+			const base = regionSchema["005"].baseColor;
+			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
+			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
+			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
+			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+		}
+	},
+	"006": { 
+		type: "mountain", 
+		baseColor: "#524e4b",
+		name: "Mountain",
+		getColor: (x: number, y: number, seed: number) => {
+			const variation = Math.floor(Math.abs(Math.sin(x * 9 + y * 7 + seed * 1.9) * 100) % 11) - 5;
+			const factor = 1 + (variation * 0.05);
+			const base = regionSchema["006"].baseColor;
+			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
+			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
+			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
+			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+		}
+	}
+};
+
+	const Perlin = {
+		p: new Uint8Array(512),
+		init(seed: number) {
+			let s = seed;
+			const random = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+			for(let i=0; i<256; i++) this.p[i] = i;
+			for(let i=255; i>0; i--) {
+				let j = Math.floor(random() * (i + 1));
+				[this.p[i], this.p[j]] = [this.p[j], this.p[i]];
+			}
+			for(let i=0; i<256; i++) this.p[256+i] = this.p[i];
+		},
+		fade(t: number) { return t * t * t * (t * (t * 6 - 15) + 10); },
+		lerp(t: number, a: number, b: number) { return a + t * (b - a); },
+		grad(hash: number, x: number, y: number) {
+			const h = hash & 15;
+			const u = h < 8 ? x : y;
+			const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
+			return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+		},
+		noise(x: number, y: number) {
+			const X = Math.floor(x) & 255;
+			const Y = Math.floor(y) & 255;
+			const xf = x - Math.floor(x);
+			const yf = y - Math.floor(y);
+			const u = this.fade(xf);
+			const v = this.fade(yf);
+			const A = this.p[X]+Y, AA = this.p[A], AB = this.p[A+1];
+			const B = this.p[X+1]+Y, BA = this.p[B], BB = this.p[B+1];
+			return this.lerp(v, this.lerp(u, this.grad(this.p[AA], xf, yf), this.grad(this.p[BA], xf-1, yf)),
+							this.lerp(u, this.grad(this.p[AB], xf, yf-1), this.grad(this.p[BB], xf-1, yf-1)));
+		}
+	};
+
+	function prng(seed: number, index: number) {
+		let val = Math.sin(seed * 12.9898 + index * 78.233) * 43758.5453;
+		return val - Math.floor(val);
+	}
+
+	let mapGrid: any[] = [];
+	let selectedTile: any = null;
+	let currentSeed: number = 0;
+
+	function generateMap() {
+		// Losowe ziarno przy pierwszym wywołaniu
+		if (currentSeed === 0) {
+			currentSeed = Math.floor(Math.random() * 10000) + 1;
+		}
+		
+		console.log('🗺️ GENERATING MAP with seed:', currentSeed);
+		
+		const seed = currentSeed;
+		Perlin.init(seed);
+		
+		let raw = Array.from({length: MAP_SIZE}, () => Array(MAP_SIZE).fill("002"));
+		
+		for(let y=0; y<MAP_SIZE; y++) {
+			for(let x=0; x<MAP_SIZE; x++) {
+				let nx = x / 7.0;
+				let ny = y / 7.0;
+				let elevation = (Perlin.noise(nx, ny) + 1) / 2;
+				let dx = Math.abs(x - MAP_SIZE/2) / (MAP_SIZE/2);
+				let dy = Math.abs(y - MAP_SIZE/2) / (MAP_SIZE/2);
+				let dist = Math.sqrt(dx*dx + dy*dy);
+				elevation -= (dist * 0.22); 
+				
+				if (elevation < 0.28) { 
+					raw[y][x] = "003"; 
+				} else {
+					let moisture = (Perlin.noise(nx + 20, ny + 20) + 1) / 2;
+					if (moisture < 0.35) {
+						raw[y][x] = "004"; 
+					} else if (moisture > 0.65) {
+						raw[y][x] = "005"; 
+					} else {
+						raw[y][x] = "002"; 
+					}
+				}
+			}
+		}
+
+		for(let pass=0; pass<3; pass++) {
+			let temp = JSON.parse(JSON.stringify(raw));
+			for(let y=0; y<MAP_SIZE; y++) {
+				for(let x=0; x<MAP_SIZE; x++) {
+					let neighbors = [];
+					if(y>0) neighbors.push(raw[y-1][x]);
+					if(y<MAP_SIZE-1) neighbors.push(raw[y+1][x]);
+					if(x>0) neighbors.push(raw[y][x-1]);
+					if(x<MAP_SIZE-1) neighbors.push(raw[y][x+1]);
+					let counts: any = {};
+					neighbors.forEach(n => counts[n] = (counts[n] || 0) + 1);
+					let maxCount = 0;
+					let dominant = raw[y][x];
+					for(let type in counts) {
+						if(counts[type] > maxCount) {
+							maxCount = counts[type];
+							dominant = type;
+						}
+					}
+					if (maxCount >= 3) temp[y][x] = dominant;
+				}
+			}
+			raw = temp;
+		}
+
+		let landTiles = [];
+		for(let y=0; y<MAP_SIZE; y++) {
+			for(let x=0; x<MAP_SIZE; x++) {
+				if (raw[y][x] !== "003") landTiles.push({x, y});
+			}
+		}
+		landTiles.sort((a,b) => prng(seed, a.x*MAP_SIZE+a.y) - prng(seed, b.x*MAP_SIZE+b.y));
+
+		const cities = [];
+		let cityCandidates = landTiles.filter(t => raw[t.y][t.x] === "002" || raw[t.y][t.x] === "004");
+		for (let pos of cityCandidates) {
+			if (cities.length >= 4) break;
+			if (cities.every(p => Math.hypot(p.x - pos.x, p.y - pos.y) > 6)) {
+				cities.push(pos);
+				raw[pos.y][pos.x] = "001";
+			}
+		}
+
+		const monos = [];
+		for (let pos of landTiles) {
+			if (monos.length >= 2) break;
+			if (raw[pos.y][pos.x] === "001") continue; 
+			
+			const farFromCities = cities.every(p => Math.hypot(p.x - pos.x, p.y - pos.y) > 6);
+			const farFromMonos = monos.every(p => Math.hypot(p.x - pos.x, p.y - pos.y) > 8);
+			
+			if (farFromCities && farFromMonos) {
+				monos.push(pos);
+				raw[pos.y][pos.x] = "006";
+			}
+		}
+
+	mapGrid = raw.map((row, y) => row.map((id, x) => {
+		const base = regionSchema[id as keyof typeof regionSchema];
+		const nameIdx = (x * 7 + y * 13 + seed) % staticNames.length;
+		const data = staticNames[nameIdx];
+		
+		// Użyj funkcji getColor do pobrania koloru na podstawie pozycji i ziarna
+		const color = base.getColor(x, y, seed);
+		
+		return {
+			x, y, regionId: id, type: base.type,
+			name: id === "001" ? "City of " + data.n : (id === "006" ? "Mount " + data.n : data.n),
+			description: data.d,
+			color: color  // ← teraz kolor jest dynamiczny
+		};
+	}));
+		
+		// LOG MAPY W JSON
+		console.log('🗺️ MAP JSON:', JSON.stringify(mapGrid, null, 2));
+		console.log('🗺️ MAP SIZE:', mapGrid.length, 'x', mapGrid[0]?.length);
+		console.log('🗺️ SEED USED:', currentSeed);
+		
+		selectedTile = null;
+		renderMapCanvas();
+	}
+
+	function renderMapCanvas() {
+		const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
+		if (!canvas) return;
+		const ctx = canvas.getContext('2d');
+		if (!ctx || !mapGrid.length) return;
+		
+		canvas.width = MAP_SIZE * 10;
+		canvas.height = MAP_SIZE * 10;
+		canvas.style.width = `${MAP_SIZE * 10}px`;
+		canvas.style.height = `${MAP_SIZE * 10}px`;
+		
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		
+		mapGrid.forEach((row, y) => {
+			row.forEach((tile: any, x: number) => {
+				ctx.fillStyle = tile.color;
+				ctx.fillRect(x * 10, y * 10, 10, 10);
+				
+				// Dodaj delikatną krawędź między różnymi typami
+				if (y > 0 && mapGrid[y-1][x].regionId !== tile.regionId) {
+					ctx.fillStyle = "rgba(0,0,0,0.2)";
+					ctx.fillRect(x * 10, y * 10, 10, 1);
+				}
+				if (x > 0 && mapGrid[y][x-1].regionId !== tile.regionId) {
+					ctx.fillStyle = "rgba(0,0,0,0.2)";
+					ctx.fillRect(x * 10, y * 10, 1, 10);
+				}
+			});
+		});
+		
+		if (selectedTile) {
+			ctx.strokeStyle = "#ffaa44";
+			ctx.lineWidth = 2;
+			ctx.strokeRect(selectedTile.x * 10 + 1, selectedTile.y * 10 + 1, 8, 8);
+		}
+	}
+
+	function handleMapClick(e: MouseEvent) {
+		const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
+		if (!canvas) return;
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		const mouseX = (e.clientX - rect.left) * scaleX;
+		const mouseY = (e.clientY - rect.top) * scaleY;
+		const x = Math.floor(mouseX / 10);
+		const y = Math.floor(mouseY / 10);
+		if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return;
+		selectedTile = {x, y};
+		renderMapCanvas();
+		
+		const tile = mapGrid[y][x];
+		const infoDiv = document.getElementById('mapTileInfo');
+		if (infoDiv) {
+			infoDiv.style.display = 'block';
+			infoDiv.innerHTML = `
+				<strong>📍 ${tile.name}</strong><br>
+				Type: ${regionSchema[tile.regionId as keyof typeof regionSchema]?.name || tile.type}<br>
+				${tile.description}<br>
+				<small>[${x}, ${y}]</small>
+			`;
+		}
+	}
+
+	function regenerateMap() {
+		currentSeed = Math.floor(Math.random() * 10000) + 1;
+		console.log('🗺️ REGENERATING MAP with new seed:', currentSeed);
+		generateMap();
+	}
+
+	onMount(() => {
+		generateMap();
+		const canvas = document.getElementById('gameMapCanvas');
+		if (canvas) {
+			canvas.addEventListener('click', handleMapClick);
+		}
+		
+		// Ustaw dane mapy dla eksportu
+		mapData.mapGrid = mapGrid;
+		mapData.currentSeed = currentSeed;
+		mapData.generateMap = generateMap;
+		mapData.regenerateMap = regenerateMap;
+		mapData.getMapGrid = () => mapGrid;
+		mapData.getCurrentSeed = () => currentSeed;
+		
+		return () => {
+			if (canvas) canvas.removeEventListener('click', handleMapClick);
+		};
+	});
+
 
 	let answer: string = ''
 	let chatMessages: any[] = []
@@ -420,8 +804,12 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 			$character.spells = [...medievalWarriorSpells]
 			$character.inventory = [...medievalWarriorInventory]
 		}
-
-		giveAnswer(answer)
+		if (!mapGenerated) {
+		generateMap();
+		mapGenerated = true;
+		}
+	
+		giveAnswer(answer);
 	}
 
 	// Reactive statements
@@ -473,7 +861,6 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 							</div>
 						{/if}
 					</div>
-
 					<div class="choices-section">
 						{#if $game.gameData.choices && $game.gameData.choices.length > 0}
 							<div
@@ -483,42 +870,6 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 							>
 								<Choices on:emittedAnswer={handleEmittedAnswer} />
 							</div>
-						{/if}
-					</div>
-
-					<div
-						class="ui-section"
-						in:scale={{ duration: 600, start: 0.9, delay: 400, easing: backOut }}
-					>
-						<UiButtons on:emittedAnswer={handleEmittedAnswer} />
-					</div>
-
-					<div class="action-boxes">
-						{#if $character.inventory && $character.inventory.length > 0}
-							<ActionBox
-								title="Inventory"
-								introDelay={550}
-								actions={$character.inventory}
-								on:emittedAnswer={handleEmittedAnswer}
-							/>
-						{/if}
-
-						{#if $character.spells && $character.spells.length > 0}
-							<ActionBox
-								title="Spells"
-								introDelay={700}
-								actions={$character.spells}
-								on:emittedAnswer={handleEmittedAnswer}
-							/>
-						{/if}
-
-						{#if $game.gameData.lootBox && $game.gameData.lootBox.length > 0}
-							<ActionBox
-								title="Loot"
-								introDelay={850}
-								actions={$game.gameData.lootBox}
-								on:emittedAnswer={handleEmittedAnswer}
-							/>
 						{/if}
 					</div>
 				</div>
@@ -593,279 +944,454 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 </div>
 
 <style>
+	/* ============================================
+	DEBUG OVERLAY – mały przycisk, nie przeszkadza
+	============================================ */
 	.debug-overlay {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999; /* Musi być wyższy niż inne elementy UI */
-    pointer-events: auto; /* Upewnij się, że można w niego klikać */
-	}
-
-
-
-
-
-	.maintenance-overlay {
 		position: fixed;
-		inset: 0;
-		background: var(--color-bg-dark);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
+		top: 8px;
+		right: 8px;
+		z-index: 9999;
+		pointer-events: auto;
 	}
 
-	.maintenance-content {
-		background: var(--color-bg-card);
-		padding: var(--space-xl);
-		border-radius: var(--radius-lg);
-		text-align: center;
-		border: 1px solid var(--color-border);
+	/* ============================================
+	GLOBAL
+	============================================ */
+	* {
+		box-sizing: border-box;
 	}
 
-	/* Quota Exceeded Overlay */
-	.quota-overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.85);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 2000;
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-	}
-
-	.quota-content {
-		background: var(--color-bg-glass);
-		backdrop-filter: blur(24px);
-		-webkit-backdrop-filter: blur(24px);
-		padding: var(--space-xl);
-		border-radius: var(--radius-xl);
-		text-align: center;
-		border: 1px solid var(--color-border);
-		max-width: 420px;
-		margin: var(--space-md);
-		box-shadow: var(--shadow-lg);
-		transition: all 0.3s ease;
-	}
-
-	.quota-content.high-demand {
-		border-color: var(--color-accent-primary, #3b82f6);
-		box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-	}
-
-	.quota-content.high-demand h2 {
-		color: var(--color-accent-primary, #3b82f6);
-	}
-
-	.quota-content.timeout {
-		border-color: var(--color-accent-gold, #facc15);
-		box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
-	}
-
-	.quota-content.timeout h2 {
-		color: var(--color-accent-gold, #facc15);
-	}
-
-	.quota-icon {
-		font-size: 3rem;
-		margin-bottom: var(--space-md);
-	}
-
-	.quota-content h2 {
-		color: var(--color-accent-warning, #f59e0b);
-		margin-bottom: var(--space-md);
-		font-size: 1.5rem;
-	}
-
-	.quota-content p {
-		color: var(--color-text-primary);
-		margin-bottom: var(--space-sm);
-		line-height: 1.6;
-	}
-
-	.quota-detail {
-		color: var(--color-text-secondary);
-		font-size: 0.9rem;
-	}
-
-	.quota-sorry {
-		color: var(--color-text-secondary);
-		font-style: italic;
-		margin-top: var(--space-md);
-	}
-
-	.quota-dismiss {
-		margin-top: var(--space-lg);
-		padding: var(--space-sm) var(--space-xl);
-		background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
-		border: none;
-		border-radius: var(--radius-md);
-		color: white;
-		font-weight: 600;
-		cursor: pointer;
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
-	}
-
-	.quota-dismiss:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-	}
-
+	/* ============================================
+	GŁÓWNY KONTENER – bez tła, jednolity kolor
+	============================================ */
 	.game-container {
 		min-height: 100vh;
 		min-height: 100dvh;
-		position: relative;
-		z-index: 1;
+		background: #0a0c12; /* ciemne, neutralne tło */
 		display: flex;
 		flex-direction: column;
+		width: 100%;
+		overflow-x: hidden;
+		position: relative;
 	}
 
+	/* ============================================
+	ZAWARTOŚĆ GRY
+	============================================ */
 	.game-content {
 		display: flex;
 		flex-direction: column;
 		flex: 1;
-		padding: var(--space-md);
-		padding-bottom: 240px;
-		max-width: 1000px;
+		padding: 12px;
+		padding-bottom: 200px; /* miejsce na boxy akcji */
 		width: 100%;
+		max-width: 800px;
 		margin: 0 auto;
-		gap: var(--space-md);
+		gap: 12px;
 	}
 
-	/* Story Box - The narrative display */
+	/* ============================================
+	SEKCJA OPOWIEŚCI – przewijana, bez licznika
+	============================================ */
 	.story-section {
 		position: relative;
-		height: 35vh; /* Fixed height - stays consistent */
 		overflow-y: auto;
-		padding: var(--space-lg);
-		border-radius: var(--radius-xl);
-		background: var(--color-bg-glass);
-		backdrop-filter: blur(24px);
-		-webkit-backdrop-filter: blur(24px);
-		border: 1px solid var(--color-border);
-		box-shadow: var(--shadow-lg);
-		margin-top: var(--space-md);
-	}
-
-	/* Decorative top accent line */
-	.story-section::before {
-		content: '';
-		position: absolute;
-		left: 20px;
-		right: 20px;
-		top: 8px;
-		height: 2px;
-		border-radius: 2px;
-		background: linear-gradient(
-			90deg,
-			transparent,
-			var(--color-accent-primary),
-			var(--color-accent-secondary),
-			var(--color-accent-primary),
-			transparent
-		);
-		opacity: 0.6;
-	}
-
-	.loading-message {
-		display: flex;
-		align-items: flex-start; /* Stay at top */
-		justify-content: center;
-		min-height: 60px;
-		color: var(--color-text-secondary);
-		font-size: 1.5rem;
-		letter-spacing: 0.3em;
+		padding: 16px;
+		border-radius: 16px;
+		background: rgba(20, 22, 32, 0.85);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		min-height: 160px;
+		max-height: 35vh;
 	}
 
 	.story-text {
-		line-height: 1.8;
-		font-size: 0.95rem;
-		color: var(--color-text-primary);
-		letter-spacing: 0.01em;
+		line-height: 1.5;
+		font-size: 14px;
+		color: #eee;
+		word-wrap: break-word;
+		white-space: normal;
 	}
 
+	/* Ukrywamy kropki ładowania (licznik) – to ten "dotty" */
+	.loading-message {
+		display: none;
+	}
+
+	/* ============================================
+	PRZYCISKI WYBORÓW – DUŻE I WYRAŹNE
+	============================================ */
 	.choices-section {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-sm);
+		gap: 10px;
+		width: 100%;
+		margin: 4px 0;
 	}
 
+	.choices-section :global(.choice-btn),
+	.choices-section :global(button) {
+		width: 100%;
+		padding: 14px 16px;
+		background: rgba(30, 35, 50, 0.95);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 14px;
+		color: #f0f0f0;
+		font-size: 15px;
+		font-weight: 500;
+		text-align: left;
+		cursor: pointer;
+		transition: all 0.2s;
+		backdrop-filter: blur(4px);
+	}
+
+	.choices-section :global(button:active) {
+		background: rgba(70, 80, 110, 0.95);
+		transform: scale(0.98);
+	}
+
+	/* ============================================
+	PRZYCISKI UI (np. otwórz ekwipunek) – opcjonalnie
+	============================================ */
 	.ui-section {
-		margin-top: auto;
+		margin: 8px 0;
+		width: 100%;
 	}
 
-	/* Action Boxes Container */
+	.ui-section :global(button) {
+		padding: 10px 18px;
+		background: rgba(40, 45, 60, 0.9);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 30px;
+		color: white;
+		font-size: 13px;
+		font-weight: 500;
+		cursor: pointer;
+		margin-right: 8px;
+		margin-bottom: 8px;
+	}
+
+	/* ============================================
+	BOX Z MONETAMI – ŁADNY, PRZYJEMNY
+	============================================ */
+	/* Jeśli masz gdzieś wyświetlanie monet, np. w UiButtons, dodaj te style */
+	.coins-display,
+	[class*="gold"],
+	[class*="coin"] {
+		background: linear-gradient(135deg, #f5b042, #e08e1a);
+		color: #2c1a0a;
+		font-weight: bold;
+		padding: 6px 12px;
+		border-radius: 40px;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 14px;
+		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+	}
+
+	/* ============================================
+	ACTION BOXES (EKWIPUNEK, ZAKLĘCIA, LOOT) – WIDOCZNE NA TELEFONIE
+	============================================ */
 	.action-boxes {
 		position: fixed;
-		left: 50%;
-		transform: translateX(-50%);
-		bottom: var(--space-md);
+		left: 0;
+		right: 0;
+		bottom: 0;
 		display: flex;
-		justify-content: space-between; /* Spread boxes to edges */
-		align-items: flex-end;
-		gap: var(--space-md);
-		flex-wrap: wrap;
-		width: min(calc(100% - var(--space-xl)), 800px);
-		z-index: 100;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: stretch;
+		gap: 8px;
+		padding: 10px 12px;
+		background: rgba(0, 0, 0, 0.92);
+		backdrop-filter: blur(16px);
+		border-top: 1px solid rgba(255, 255, 255, 0.15);
+		z-index: 200;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
-	/* Responsive Adjustments */
-	@media (max-width: 768px) {
+	/* Każdy box – Inventory, Spells, Loot */
+	.action-boxes :global(.action-box) {
+		flex: 1;
+		min-width: 110px;
+		background: rgba(25, 28, 38, 0.95);
+		border-radius: 16px;
+		padding: 10px 8px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		display: flex;
+		flex-direction: column;
+		max-height: 170px;
+		overflow-y: auto;
+	}
+
+	.action-boxes :global(.action-box-title) {
+		font-size: 13px;
+		font-weight: bold;
+		margin-bottom: 8px;
+		color: #ddd;
+		text-align: center;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.action-boxes :global(button) {
+		width: 100%;
+		padding: 8px 6px;
+		margin: 3px 0;
+		background: rgba(60, 65, 90, 0.9);
+		border: none;
+		border-radius: 10px;
+		color: white;
+		font-size: 11px;
+		cursor: pointer;
+		text-align: left;
+		word-break: break-word;
+		transition: 0.1s;
+	}
+
+	.action-boxes :global(button:active) {
+		background: rgba(100, 110, 150, 0.9);
+	}
+
+	/* ============================================
+	OVERLAY – BŁĘDY API (QUOTA)
+	============================================ */
+	.maintenance-overlay,
+	.quota-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.95);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 2000;
+		padding: 20px;
+	}
+
+	.maintenance-content,
+	.quota-content {
+		background: rgba(20, 22, 35, 0.98);
+		backdrop-filter: blur(16px);
+		padding: 24px;
+		border-radius: 28px;
+		text-align: center;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		max-width: 90%;
+		width: 320px;
+	}
+
+	.quota-icon {
+		font-size: 2.5rem;
+		margin-bottom: 16px;
+	}
+
+	.quota-content h2 {
+		font-size: 1.3rem;
+		margin-bottom: 12px;
+		color: #ffaa44;
+	}
+
+	.quota-content p {
+		font-size: 0.9rem;
+		line-height: 1.5;
+		color: #ddd;
+	}
+
+	.quota-dismiss {
+		margin-top: 20px;
+		padding: 10px 24px;
+		background: linear-gradient(135deg, #5a67d8, #7f5af0);
+		border: none;
+		border-radius: 40px;
+		color: white;
+		font-weight: 600;
+		cursor: pointer;
+		width: 100%;
+	}
+
+	/* ============================================
+	RESPONSYWNOSĆ – TABLET I WIĘKSZE
+	============================================ */
+	@media (min-width: 768px) {
 		.game-content {
-			padding: var(--space-sm);
-			padding-bottom: 200px;
+			padding: 20px;
+			padding-bottom: 180px;
+			gap: 20px;
 		}
 
 		.story-section {
-			height: 30vh; /* Fixed height */
-			padding: var(--space-md);
-			border-radius: var(--radius-lg);
-		}
-
-		.action-boxes {
-			bottom: var(--space-sm);
-			gap: var(--space-sm);
-			width: calc(100% - var(--space-md));
-		}
-	}
-
-	@media (max-width: 480px) {
-		.story-section {
-			height: 20vh; /* Fixed height */
+			padding: 24px;
 		}
 
 		.story-text {
-			font-size: 0.875rem;
+			font-size: 16px;
 		}
 
-		.game-content {
-			padding-bottom: 140px;
+		.choices-section :global(button) {
+			padding: 16px 20px;
+			font-size: 16px;
 		}
 
 		.action-boxes {
-			flex-wrap: nowrap;
-			overflow-x: auto;
-			justify-content: space-between; /* Inventory left, Spells right */
-			padding: var(--space-xs);
-			gap: var(--space-xs);
-			-webkit-overflow-scrolling: touch;
+			padding: 12px 20px;
+			gap: 12px;
+		}
+
+		.action-boxes :global(.action-box) {
+			min-width: 150px;
+			padding: 12px;
 		}
 	}
 
-	/* Landscape mobile */
-	@media (max-height: 500px) and (orientation: landscape) {
+	@media (min-width: 1024px) {
+		.action-boxes {
+			max-width: 900px;
+			left: 50%;
+			right: auto;
+			transform: translateX(-50%);
+			border-radius: 20px 20px 0 0;
+		}
+	}
+
+	/* ============================================
+	TELEFONY (max-width: 480px)
+	============================================ */
+	@media (max-width: 480px) {
+		.game-content {
+			padding: 8px;
+			padding-bottom: 180px;
+		}
+
 		.story-section {
-			max-height: 40vh;
+			padding: 12px;
+			min-height: 140px;
 		}
 
-		.game-content {
-			padding-bottom: 160px;
+		.story-text {
+			font-size: 13px;
+		}
+
+		.choices-section :global(button) {
+			padding: 12px 14px;
+			font-size: 14px;
 		}
 
 		.action-boxes {
-			bottom: var(--space-xs);
+			padding: 8px 10px;
+			gap: 6px;
+		}
+
+		.action-boxes :global(.action-box) {
+			min-width: 100px;
+			max-height: 150px;
+		}
+
+		.action-boxes :global(.action-box-title) {
+			font-size: 11px;
+		}
+
+		.action-boxes :global(button) {
+			font-size: 10px;
+			padding: 6px 4px;
 		}
 	}
+
+	/* ============================================
+	POZIOME USTAWIENIE (LANDSCAPE)
+	============================================ */
+	@media (max-height: 600px) and (orientation: landscape) {
+		.game-content {
+			padding-bottom: 110px;
+		}
+
+		.story-section {
+			max-height: 30vh;
+			min-height: 100px;
+		}
+
+		.action-boxes {
+			padding: 5px 8px;
+		}
+
+		.action-boxes :global(.action-box) {
+			min-width: 90px;
+			max-height: 100px;
+		}
+	}
+
+	/* ============================================
+	PRZEWIJANIE BOXÓW I SEKCJI
+	============================================ */
+	.story-section::-webkit-scrollbar,
+	.action-boxes :global(.action-box)::-webkit-scrollbar {
+		width: 3px;
+		height: 3px;
+	}
+
+	.story-section::-webkit-scrollbar-track,
+	.action-boxes :global(.action-box)::-webkit-scrollbar-track {
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.story-section::-webkit-scrollbar-thumb,
+	.action-boxes :global(.action-box)::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.3);
+		border-radius: 3px;
+	}
+/* ============================================
+   MAPA ŚWIATA
+   ============================================ */
+.map-container {
+	margin-top: 20px;
+	padding: 12px;
+	background: rgba(0, 0, 0, 0.6);
+	border-radius: 12px;
+	border: 1px solid rgba(255, 170, 68, 0.3);
+}
+
+.map-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid rgba(255, 170, 68, 0.3);
+}
+
+.map-title {
+	font-size: 12px;
+	font-weight: bold;
+	color: #ffaa44;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+}
+
+.map-refresh-btn {
+	background: transparent;
+	border: 1px solid #ffaa44;
+	color: #ffaa44;
+	padding: 4px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: all 0.2s;
+}
+
+.map-refresh-btn:hover {
+	background: #ffaa44;
+	color: #000;
+}
+
+.map-tile-info {
+	margin-top: 10px;
+	padding: 8px;
+	background: rgba(0, 0, 0, 0.7);
+	border-radius: 8px;
+	font-size: 11px;
+	color: #ddd;
+	border-left: 3px solid #ffaa44;
+}
 </style>

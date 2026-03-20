@@ -678,4 +678,97 @@
 			font-size: 2rem;
 		}
 	}
+	/* Wersja tablet */
+	@media (max-width: 1024px) {
+		.creation-grid {
+			grid-template-columns: 1fr;
+			gap: 20px;
+		}
+		
+		.neon-header {
+			max-width: 90%;
+		}
+	}
+
+	/* Wersja mobilna */
+	@media (max-width: 768px) {
+		.character-creation {
+			padding: 10px;
+		}
+		
+		.creation-grid {
+			gap: 15px;
+		}
+		
+		.left-panel, .right-panel {
+			padding: 15px;
+		}
+		
+		.avatars-grid {
+			flex-direction: column;
+			align-items: center;
+			gap: 15px;
+		}
+		
+		.avatar-card {
+			width: 100%;
+			max-width: 120px;
+		}
+		
+		.avatar-wrapper {
+			width: 80px;
+			height: 80px;
+		}
+		
+		.stat-name {
+			font-size: 0.8rem;
+		}
+		
+		.stat-btn {
+			width: 30px;
+			height: 30px;
+			font-size: 1.2rem;
+		}
+		
+		.stat-value {
+			font-size: 1.1rem;
+		}
+		
+		.confirm-btn {
+			padding: 12px 20px;
+			font-size: 0.9rem;
+		}
+		
+		.title-glitch {
+			font-size: 1.8rem;
+		}
+		
+		.title-sub {
+			font-size: 0.7rem;
+		}
+	}
+
+	/* Bardzo małe telefony */
+	@media (max-width: 480px) {
+		.title-glitch {
+			font-size: 1.4rem;
+		}
+		
+		.name-input {
+			padding: 8px 12px;
+			font-size: 0.9rem;
+		}
+		
+		.pool-label, .pool-value {
+			font-size: 0.8rem;
+		}
+		
+		.stat-name {
+			font-size: 0.7rem;
+		}
+		
+		.stat-control {
+			gap: 8px;
+		}
+	}
 </style>

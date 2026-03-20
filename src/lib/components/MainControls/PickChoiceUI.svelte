@@ -117,7 +117,9 @@
 		flex-direction: column;
 		gap: var(--space-xs);
 	}
-
+	.choices-panel {
+		margin-top: 1rem;
+	}
 	.choice-btn {
 		display: flex;
 		align-items: center;

@@ -316,7 +316,9 @@
 				disabled={$misc.loading || $misc.death}
 				on:click={() => {
 					useItem(action)
-					handleSell(`Sell ${action.name}?`, action)
+					if ($game.gameData.event?.shopMode) {
+						handleSell(`Sell ${action.name}?`, action)
+					}
 				}}
 				on:mouseenter={(e) => handleMouseMove(e, action)}
 				on:mousemove={(e) => handleMouseMove(e, action)}
@@ -507,6 +509,54 @@
 			max-height: 70px;
 			gap: 2px;
 			padding: var(--space-xs);
+		}
+	}
+	/* ============================================
+	FORCE VISIBLE ON MOBILE - OVERRIDE
+	============================================ */
+	@media (max-width: 768px) {
+		.action-panel {
+			min-width: 100px !important;
+			max-width: none !important;
+			flex: 1 !important;
+			background: rgba(0, 0, 0, 0.85) !important;
+		}
+		
+		.items-grid {
+			max-height: 130px !important;
+			min-height: 80px !important;
+			overflow-y: auto !important;
+			display: grid !important;
+			grid-template-columns: repeat(3, 1fr) !important;
+			gap: 6px !important;
+			padding: 8px !important;
+		}
+		
+		.item-btn {
+			width: 100% !important;
+			height: auto !important;
+			aspect-ratio: 1 / 1 !important;
+		}
+		
+		.item-icon {
+			width: 70% !important;
+			height: 70% !important;
+		}
+		
+		.panel-title {
+			font-size: 10px !important;
+			font-weight: bold !important;
+			color: #ffaa44 !important;
+			text-transform: uppercase !important;
+			letter-spacing: 1px !important;
+		}
+		
+		.stat-bar {
+			height: 8px !important;
+		}
+		
+		.stat-text {
+			font-size: 8px !important;
 		}
 	}
 </style>
