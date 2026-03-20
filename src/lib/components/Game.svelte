@@ -1,20 +1,4 @@
 <script lang="ts">
-	// Eksportuj funkcje i dane mapy dla +page.svelte
-	export function getMapGrid() {
-		return mapGrid;
-	}
-
-	export function getCurrentSeed() {
-		return currentSeed;
-	}
-	export let mapData = {
-		mapGrid: [],
-		currentSeed: 0,
-		generateMap: () => {},
-		regenerateMap: () => {},
-		getMapGrid: () => mapGrid,
-		getCurrentSeed: () => currentSeed
-	};
 	import { fade, scale } from 'svelte/transition'
 	import { backOut } from 'svelte/easing'
 
@@ -41,287 +25,26 @@
 	import medievalWarriorSpells from '$lib/gamedata/gamestarters/medievalWarriorSpells.json'
 
 	import Modal from './testing/Modal.svelte'
-
 	import { CHARACTER_CLASSES, STARTING_VALUES, SHOP_CONFIG } from '$lib/config/constants'
-
 	import { onMount } from 'svelte'
+import { 
+	generateMap, 
+	getFullWorldData, 
+	getMapGrid, 
+	MAP_SIZE,
+	findStartingLocation,
+	getRegionsInRadius,
+	enhanceRegionsWithAI,
+	updateWorldWithEnhancedRegions,
+	generateAllRegionsWithAI
+} from '$lib/components/utils/MapGenerator';
 
-	// ===== GENERATOR MAPY =====
-	const MAP_SIZE = 20;
+	// Import z pliku .ts (nie .svelte!)
 	let mapGenerated = false;
-	const staticNames = [
-		{n: "Vaeloria", d: "Zapomniane miasto w chmurach"},
-		{n: "Kranz", d: "Posterunek na skraju świata"},
-		{n: "Onyx Ridge", d: "Czarne skały pełne echa"},
-		{n: "Greenfell", d: "Wiecznie zielone doliny"},
-		{n: "Ironhold", d: "Twierdza wykuta w granicie"},
-		{n: "Silvershadow", d: "Lustrzane tafle jezior"},
-		{n: "Dustmourn", d: "Piaszczyste pustkowia"},
-		{n: "Everbloom", d: "Oaza niegasnących kwiatów"},
-		{n: "Stormreach", d: "Wzgórza targane wiatrem"},
-		{n: "Nightshade", d: "Mroczny, gęsty las"},
-		{n: "Highfall", d: "Kaskady spadającej wody"},
-		{n: "Cinder Peak", d: "Wygasły wulkaniczny stożek"},
-		{n: "Mistwatch", d: "Wieża we mgle"},
-		{n: "Solitude", d: "Ciche miejsce odosobnienia"},
-		{n: "Wraithwood", d: "Szept starej puszczy"},
-		{n: "Goldleaf", d: "Jesienne gaje klonowe"},
-		{n: "Obsidian", d: "Gładka, ciemna otchłań"},
-		{n: "Frostpeak", d: "Zmarznięta iglica świata"},
-		{n: "Dawnstar", d: "Pierwszy blask poranka"},
-		{n: "Ravenloft", d: "Gniazdo czarnych kruków"}
-	];
-
-const regionSchema = {
-	"001": { 
-		type: "city", 
-		baseColor: "#b82121",
-		name: "City",
-		getColor: (x: number, y: number, seed: number) => {
-			const variation = Math.floor(Math.abs(Math.sin(x * 7 + y * 13 + seed) * 100) % 11) - 5;
-			const factor = 1 + (variation * 0.05);
-			const base = regionSchema["001"].baseColor;
-			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
-			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
-			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
-			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-		}
-	},
-	"002": { 
-		type: "plains", 
-		baseColor: "#b3f23a",
-		name: "Plains",
-		getColor: (x: number, y: number, seed: number) => {
-			const variation = Math.floor(Math.abs(Math.sin(x * 5 + y * 11 + seed * 1.3) * 100) % 11) - 5;
-			const factor = 1 + (variation * 0.05);
-			const base = regionSchema["002"].baseColor;
-			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
-			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
-			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
-			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-		}
-	},
-	"003": { 
-		type: "water", 
-		baseColor: "#0d5da8",
-		name: "Water",
-		getColor: (x: number, y: number, seed: number) => {
-			const variation = Math.floor(Math.abs(Math.sin(x * 3 + y * 9 + seed * 1.7) * 100) % 11) - 5;
-			const factor = 1 + (variation * 0.05);
-			const base = regionSchema["003"].baseColor;
-			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
-			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
-			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
-			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-		}
-	},
-	"004": { 
-		type: "desert", 
-		baseColor: "#e8b043",
-		name: "Desert",
-		getColor: (x: number, y: number, seed: number) => {
-			const variation = Math.floor(Math.abs(Math.sin(x * 11 + y * 5 + seed * 2.1) * 100) % 11) - 5;
-			const factor = 1 + (variation * 0.05);
-			const base = regionSchema["004"].baseColor;
-			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
-			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
-			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
-			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-		}
-	},
-	"005": { 
-		type: "forest", 
-		baseColor: "#427021",
-		name: "Forest",
-		getColor: (x: number, y: number, seed: number) => {
-			const variation = Math.floor(Math.abs(Math.sin(x * 8 + y * 6 + seed * 2.5) * 100) % 11) - 5;
-			const factor = 1 + (variation * 0.05);
-			const base = regionSchema["005"].baseColor;
-			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
-			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
-			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
-			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-		}
-	},
-	"006": { 
-		type: "mountain", 
-		baseColor: "#524e4b",
-		name: "Mountain",
-		getColor: (x: number, y: number, seed: number) => {
-			const variation = Math.floor(Math.abs(Math.sin(x * 9 + y * 7 + seed * 1.9) * 100) % 11) - 5;
-			const factor = 1 + (variation * 0.05);
-			const base = regionSchema["006"].baseColor;
-			const r = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(1,3), 16) * factor)));
-			const g = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(3,5), 16) * factor)));
-			const b = Math.min(255, Math.max(0, Math.floor(parseInt(base.slice(5,7), 16) * factor)));
-			return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-		}
-	}
-};
-
-	const Perlin = {
-		p: new Uint8Array(512),
-		init(seed: number) {
-			let s = seed;
-			const random = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-			for(let i=0; i<256; i++) this.p[i] = i;
-			for(let i=255; i>0; i--) {
-				let j = Math.floor(random() * (i + 1));
-				[this.p[i], this.p[j]] = [this.p[j], this.p[i]];
-			}
-			for(let i=0; i<256; i++) this.p[256+i] = this.p[i];
-		},
-		fade(t: number) { return t * t * t * (t * (t * 6 - 15) + 10); },
-		lerp(t: number, a: number, b: number) { return a + t * (b - a); },
-		grad(hash: number, x: number, y: number) {
-			const h = hash & 15;
-			const u = h < 8 ? x : y;
-			const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
-			return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-		},
-		noise(x: number, y: number) {
-			const X = Math.floor(x) & 255;
-			const Y = Math.floor(y) & 255;
-			const xf = x - Math.floor(x);
-			const yf = y - Math.floor(y);
-			const u = this.fade(xf);
-			const v = this.fade(yf);
-			const A = this.p[X]+Y, AA = this.p[A], AB = this.p[A+1];
-			const B = this.p[X+1]+Y, BA = this.p[B], BB = this.p[B+1];
-			return this.lerp(v, this.lerp(u, this.grad(this.p[AA], xf, yf), this.grad(this.p[BA], xf-1, yf)),
-							this.lerp(u, this.grad(this.p[AB], xf, yf-1), this.grad(this.p[BB], xf-1, yf-1)));
-		}
-	};
-
-	function prng(seed: number, index: number) {
-		let val = Math.sin(seed * 12.9898 + index * 78.233) * 43758.5453;
-		return val - Math.floor(val);
-	}
-
 	let mapGrid: any[] = [];
 	let selectedTile: any = null;
-	let currentSeed: number = 0;
 
-	function generateMap() {
-		// Losowe ziarno przy pierwszym wywołaniu
-		if (currentSeed === 0) {
-			currentSeed = Math.floor(Math.random() * 10000) + 1;
-		}
-		
-		console.log('🗺️ GENERATING MAP with seed:', currentSeed);
-		
-		const seed = currentSeed;
-		Perlin.init(seed);
-		
-		let raw = Array.from({length: MAP_SIZE}, () => Array(MAP_SIZE).fill("002"));
-		
-		for(let y=0; y<MAP_SIZE; y++) {
-			for(let x=0; x<MAP_SIZE; x++) {
-				let nx = x / 7.0;
-				let ny = y / 7.0;
-				let elevation = (Perlin.noise(nx, ny) + 1) / 2;
-				let dx = Math.abs(x - MAP_SIZE/2) / (MAP_SIZE/2);
-				let dy = Math.abs(y - MAP_SIZE/2) / (MAP_SIZE/2);
-				let dist = Math.sqrt(dx*dx + dy*dy);
-				elevation -= (dist * 0.22); 
-				
-				if (elevation < 0.28) { 
-					raw[y][x] = "003"; 
-				} else {
-					let moisture = (Perlin.noise(nx + 20, ny + 20) + 1) / 2;
-					if (moisture < 0.35) {
-						raw[y][x] = "004"; 
-					} else if (moisture > 0.65) {
-						raw[y][x] = "005"; 
-					} else {
-						raw[y][x] = "002"; 
-					}
-				}
-			}
-		}
-
-		for(let pass=0; pass<3; pass++) {
-			let temp = JSON.parse(JSON.stringify(raw));
-			for(let y=0; y<MAP_SIZE; y++) {
-				for(let x=0; x<MAP_SIZE; x++) {
-					let neighbors = [];
-					if(y>0) neighbors.push(raw[y-1][x]);
-					if(y<MAP_SIZE-1) neighbors.push(raw[y+1][x]);
-					if(x>0) neighbors.push(raw[y][x-1]);
-					if(x<MAP_SIZE-1) neighbors.push(raw[y][x+1]);
-					let counts: any = {};
-					neighbors.forEach(n => counts[n] = (counts[n] || 0) + 1);
-					let maxCount = 0;
-					let dominant = raw[y][x];
-					for(let type in counts) {
-						if(counts[type] > maxCount) {
-							maxCount = counts[type];
-							dominant = type;
-						}
-					}
-					if (maxCount >= 3) temp[y][x] = dominant;
-				}
-			}
-			raw = temp;
-		}
-
-		let landTiles = [];
-		for(let y=0; y<MAP_SIZE; y++) {
-			for(let x=0; x<MAP_SIZE; x++) {
-				if (raw[y][x] !== "003") landTiles.push({x, y});
-			}
-		}
-		landTiles.sort((a,b) => prng(seed, a.x*MAP_SIZE+a.y) - prng(seed, b.x*MAP_SIZE+b.y));
-
-		const cities = [];
-		let cityCandidates = landTiles.filter(t => raw[t.y][t.x] === "002" || raw[t.y][t.x] === "004");
-		for (let pos of cityCandidates) {
-			if (cities.length >= 4) break;
-			if (cities.every(p => Math.hypot(p.x - pos.x, p.y - pos.y) > 6)) {
-				cities.push(pos);
-				raw[pos.y][pos.x] = "001";
-			}
-		}
-
-		const monos = [];
-		for (let pos of landTiles) {
-			if (monos.length >= 2) break;
-			if (raw[pos.y][pos.x] === "001") continue; 
-			
-			const farFromCities = cities.every(p => Math.hypot(p.x - pos.x, p.y - pos.y) > 6);
-			const farFromMonos = monos.every(p => Math.hypot(p.x - pos.x, p.y - pos.y) > 8);
-			
-			if (farFromCities && farFromMonos) {
-				monos.push(pos);
-				raw[pos.y][pos.x] = "006";
-			}
-		}
-
-	mapGrid = raw.map((row, y) => row.map((id, x) => {
-		const base = regionSchema[id as keyof typeof regionSchema];
-		const nameIdx = (x * 7 + y * 13 + seed) % staticNames.length;
-		const data = staticNames[nameIdx];
-		
-		// Użyj funkcji getColor do pobrania koloru na podstawie pozycji i ziarna
-		const color = base.getColor(x, y, seed);
-		
-		return {
-			x, y, regionId: id, type: base.type,
-			name: id === "001" ? "City of " + data.n : (id === "006" ? "Mount " + data.n : data.n),
-			description: data.d,
-			color: color  // ← teraz kolor jest dynamiczny
-		};
-	}));
-		
-		// LOG MAPY W JSON
-		console.log('🗺️ MAP JSON:', JSON.stringify(mapGrid, null, 2));
-		console.log('🗺️ MAP SIZE:', mapGrid.length, 'x', mapGrid[0]?.length);
-		console.log('🗺️ SEED USED:', currentSeed);
-		
-		selectedTile = null;
-		renderMapCanvas();
-	}
-
+	// Funkcje do obsługi canvas (muszą zostać)
 	function renderMapCanvas() {
 		const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
 		if (!canvas) return;
@@ -340,7 +63,6 @@ const regionSchema = {
 				ctx.fillStyle = tile.color;
 				ctx.fillRect(x * 10, y * 10, 10, 10);
 				
-				// Dodaj delikatną krawędź między różnymi typami
 				if (y > 0 && mapGrid[y-1][x].regionId !== tile.regionId) {
 					ctx.fillStyle = "rgba(0,0,0,0.2)";
 					ctx.fillRect(x * 10, y * 10, 10, 1);
@@ -379,40 +101,40 @@ const regionSchema = {
 			infoDiv.style.display = 'block';
 			infoDiv.innerHTML = `
 				<strong>📍 ${tile.name}</strong><br>
-				Type: ${regionSchema[tile.regionId as keyof typeof regionSchema]?.name || tile.type}<br>
+				Type: ${tile.type}<br>
 				${tile.description}<br>
 				<small>[${x}, ${y}]</small>
 			`;
 		}
 	}
 
-	function regenerateMap() {
-		currentSeed = Math.floor(Math.random() * 10000) + 1;
-		console.log('🗺️ REGENERATING MAP with new seed:', currentSeed);
-		generateMap();
+	// W onMount:
+// W Game.svelte, w sekcji onMount
+onMount(() => {
+	// Wygeneruj mapę
+	mapGrid = generateMap();
+	
+	// Upewnij się, że canvas istnieje i ma odpowiedni ID
+	const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
+	if (canvas) {
+		console.log('Canvas found, rendering map...');
+		canvas.addEventListener('click', handleMapClick);
+		// Wywołaj renderowanie po krótkim opóźnieniu, aby upewnić się, że DOM jest gotowy
+		setTimeout(() => {
+			renderMapCanvas();
+		}, 50);
+	} else {
+		console.error('Canvas with id "gameMapCanvas" not found!');
 	}
-
-	onMount(() => {
-		generateMap();
-		const canvas = document.getElementById('gameMapCanvas');
-		if (canvas) {
-			canvas.addEventListener('click', handleMapClick);
-		}
-		
-		// Ustaw dane mapy dla eksportu
-		mapData.mapGrid = mapGrid;
-		mapData.currentSeed = currentSeed;
-		mapData.generateMap = generateMap;
-		mapData.regenerateMap = regenerateMap;
-		mapData.getMapGrid = () => mapGrid;
-		mapData.getCurrentSeed = () => currentSeed;
-		
-		return () => {
-			if (canvas) canvas.removeEventListener('click', handleMapClick);
-		};
-	});
-
-
+	
+	return () => {
+		if (canvas) canvas.removeEventListener('click', handleMapClick);
+	};
+});
+// Eksport dla +page.svelte
+export function getMapGridFromGame() {
+	return mapGrid;
+}
 	let answer: string = ''
 	let chatMessages: any[] = []
 	let enemyOnFrontend: boolean = false
@@ -778,11 +500,12 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		giveAnswer(event.detail.answer)
 	}
 
-	function handleMedievalGameStart(event: CustomEvent) {
-		startMedievalGame(event.detail.answer)
+	// handleMedievalGameStart również musi być async
+	async function handleMedievalGameStart(event: CustomEvent) {
+		await startMedievalGame(event.detail.answer)
 	}
 
-	function startMedievalGame(answer: string) {
+	async function startMedievalGame(answer: string) {
 		// Reset game state
 		chatMessages = []
 		$game.gameData.lootBox = []
@@ -804,11 +527,24 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 			$character.spells = [...medievalWarriorSpells]
 			$character.inventory = [...medievalWarriorInventory]
 		}
-		if (!mapGenerated) {
-		generateMap();
-		mapGenerated = true;
-		}
+		
+if (!mapGenerated) {
+	// Wygeneruj mapę proceduralnie
+	mapGrid = generateMap();
+	console.log('✅ Map generated');
 	
+	// Uruchom generowanie regionów w tle (nie blokuje gry)
+	generateAllRegionsWithAI().then(() => {
+		console.log('✨ All regions enhanced by AI!');
+		renderMapCanvas(); // odśwież mapę po zakończeniu
+	}).catch(err => {
+		console.error('Background generation failed:', err);
+	});
+	
+	console.log('🌍 World ready (AI generating in background)!');
+	mapGenerated = true;
+}
+		
 		giveAnswer(answer);
 	}
 

@@ -8,8 +8,8 @@
 	let miniMapGrid: any[] = [];
 	
 	function updateMiniMap() {
-		if (gameComponent && gameComponent.getMapGrid) {
-			const newGrid = gameComponent.getMapGrid();
+		if (gameComponent && gameComponent.getMapGridFromGame) {
+			const newGrid = gameComponent.getMapGridFromGame();
 			if (newGrid && newGrid.length > 0) {
 				miniMapGrid = newGrid;
 				drawMiniMap();
@@ -24,30 +24,46 @@
 		if (!ctx) return;
 		
 		const size = miniMapGrid.length;
-		const cellSize = Math.min(160 / size, 160 / size);
-		const offset = (160 - cellSize * size) / 2;
+		const cellSize = canvas.width / size;
 		
-		ctx.clearRect(0, 0, 160, 160);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		
 		for (let y = 0; y < size; y++) {
 			for (let x = 0; x < size; x++) {
 				const tile = miniMapGrid[y]?.[x];
 				if (tile) {
 					ctx.fillStyle = tile.color;
-					ctx.fillRect(offset + x * cellSize, offset + y * cellSize, cellSize - 0.5, cellSize - 0.5);
+					ctx.fillRect(x * cellSize, y * cellSize, cellSize - 0.5, cellSize - 0.5);
 				}
 			}
 		}
 	}
 	
-	function handleMiniMapClick() {
-		console.log('Mini map clicked');
+	function handleMiniMapClick(e: MouseEvent) {
+		const canvas = document.getElementById('miniMapCanvas') as HTMLCanvasElement | null;
+		if (!canvas || !miniMapGrid.length) return;
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		const mouseX = (e.clientX - rect.left) * scaleX;
+		const mouseY = (e.clientY - rect.top) * scaleY;
+		const size = miniMapGrid.length;
+		const x = Math.floor(mouseX / (canvas.width / size));
+		const y = Math.floor(mouseY / (canvas.height / size));
+		
+		if (x >= 0 && x < size && y >= 0 && y < size) {
+			const tile = miniMapGrid[y]?.[x];
+			if (tile) {
+				console.log('📍 Selected tile:', tile);
+				// Możesz dodać tu wyświetlenie informacji o tile
+			}
+		}
 	}
 	
 	onMount(() => {
 		const interval = setInterval(() => {
-			if (gameComponent && gameComponent.getMapGrid && $misc.started) {
-				const grid = gameComponent.getMapGrid();
+			if (gameComponent && gameComponent.getMapGridFromGame && $misc.started) {
+				const grid = gameComponent.getMapGridFromGame();
 				if (grid && grid.length > 0 && miniMapGrid.length === 0) {
 					miniMapGrid = grid;
 					drawMiniMap();
