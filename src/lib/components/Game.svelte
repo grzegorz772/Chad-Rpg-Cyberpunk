@@ -47,9 +47,21 @@ import {
 	// Funkcje do obsługi canvas (muszą zostać)
 	function renderMapCanvas() {
 		const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
-		if (!canvas) return;
+		if (!canvas) {
+			console.warn('Canvas element not found');
+			return;
+		}
+		
 		const ctx = canvas.getContext('2d');
-		if (!ctx || !mapGrid.length) return;
+		if (!ctx) {
+			console.warn('Could not get canvas context');
+			return;
+		}
+		
+		if (!mapGrid || !mapGrid.length) {
+			console.warn('Map grid not ready');
+			return;
+		}
 		
 		canvas.width = MAP_SIZE * 10;
 		canvas.height = MAP_SIZE * 10;
@@ -58,27 +70,38 @@ import {
 		
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		
-		mapGrid.forEach((row, y) => {
-			row.forEach((tile: any, x: number) => {
-				ctx.fillStyle = tile.color;
+		// Draw each tile
+		for (let y = 0; y < mapGrid.length; y++) {
+			const row = mapGrid[y];
+			if (!row) continue;
+			
+			for (let x = 0; x < row.length; x++) {
+				const tile = row[x];
+				if (!tile) continue;
+				
+				ctx.fillStyle = tile.color || '#888888';
 				ctx.fillRect(x * 10, y * 10, 10, 10);
 				
-				if (y > 0 && mapGrid[y-1][x].regionId !== tile.regionId) {
+				// Draw borders between different region types
+				if (y > 0 && mapGrid[y-1] && mapGrid[y-1][x] && mapGrid[y-1][x].regionId !== tile.regionId) {
 					ctx.fillStyle = "rgba(0,0,0,0.2)";
 					ctx.fillRect(x * 10, y * 10, 10, 1);
 				}
-				if (x > 0 && mapGrid[y][x-1].regionId !== tile.regionId) {
+				if (x > 0 && mapGrid[y][x-1] && mapGrid[y][x-1].regionId !== tile.regionId) {
 					ctx.fillStyle = "rgba(0,0,0,0.2)";
 					ctx.fillRect(x * 10, y * 10, 1, 10);
 				}
-			});
-		});
+			}
+		}
 		
-		if (selectedTile) {
+		// Draw selected tile highlight
+		if (selectedTile && mapGrid[selectedTile.y] && mapGrid[selectedTile.y][selectedTile.x]) {
 			ctx.strokeStyle = "#ffaa44";
 			ctx.lineWidth = 2;
 			ctx.strokeRect(selectedTile.x * 10 + 1, selectedTile.y * 10 + 1, 8, 8);
 		}
+		
+		console.log('Map rendered successfully');
 	}
 
 	function handleMapClick(e: MouseEvent) {
@@ -504,46 +527,73 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 	async function handleMedievalGameStart(event: CustomEvent) {
 		await startMedievalGame(event.detail.answer)
 	}
-
 	async function startMedievalGame(answer: string) {
 		// Reset game state
-		chatMessages = []
-		$game.gameData.lootBox = []
-		$game.gameData.placeAndTime = { place: '', time: '00:00' }
-		$game.gameData.shop = []
-		$game.gameData.choices = []
-		$game.gameData.enemy = {}
-		$game.gameData.event = { inCombat: false, shopMode: null, lootMode: false }
-		$selectedItem = {}
-		$character.gold = STARTING_VALUES.GOLD
+		chatMessages = [];
+		$game.gameData.lootBox = [];
+		$game.gameData.placeAndTime = { place: '', time: '00:00' };
+		$game.gameData.shop = [];
+		$game.gameData.choices = [];
+		$game.gameData.enemy = {};
+		$game.gameData.event = { inCombat: false, shopMode: null, lootMode: false };
+		$selectedItem = {};
+		$character.gold = STARTING_VALUES.GOLD;
 
-		const heroClass = $game.gameData.heroClass
+		const heroClass = $game.gameData.heroClass;
 		if (heroClass === 'mage') {
-			$character.stats = [CHARACTER_CLASSES.MAGE.stats]
-			$character.spells = [...medievalMageSpells]
-			$character.inventory = [...medievalMageInventory]
+			$character.stats = [CHARACTER_CLASSES.MAGE.stats];
+			$character.spells = [...medievalMageSpells];
+			$character.inventory = [...medievalMageInventory];
 		} else if (heroClass === 'warrior') {
-			$character.stats = [CHARACTER_CLASSES.WARRIOR.stats]
-			$character.spells = [...medievalWarriorSpells]
-			$character.inventory = [...medievalWarriorInventory]
+			$character.stats = [CHARACTER_CLASSES.WARRIOR.stats];
+			$character.spells = [...medievalWarriorSpells];
+			$character.inventory = [...medievalWarriorInventory];
 		}
 		
-if (!mapGenerated) {
-	// Wygeneruj mapę proceduralnie
-	mapGrid = generateMap();
-	console.log('✅ Map generated');
-	
-	// Uruchom generowanie regionów w tle (nie blokuje gry)
-	generateAllRegionsWithAI().then(() => {
-		console.log('✨ All regions enhanced by AI!');
-		renderMapCanvas(); // odśwież mapę po zakończeniu
-	}).catch(err => {
-		console.error('Background generation failed:', err);
-	});
-	
-	console.log('🌍 World ready (AI generating in background)!');
-	mapGenerated = true;
-}
+		if (!mapGenerated) {
+			// Show loading message
+			$ui.errorWarnMsg = "🌍 Generating world... (this may take a moment)";
+			
+			// Wygeneruj mapę proceduralnie
+			mapGrid = generateMap();
+			console.log('✅ Map generated with', mapGrid.length, 'rows');
+			
+			// Sprawdź czy canvas istnieje i wyrenderuj mapę
+			setTimeout(() => {
+				const canvas = document.getElementById('gameMapCanvas');
+				if (canvas) {
+					console.log('Canvas found, rendering map');
+					renderMapCanvas();
+				} else {
+					console.warn('Canvas not found for initial render');
+				}
+			}, 100);
+			
+			// Uruchom generowanie regionów w tle (nie blokuje gry)
+			generateAllRegionsWithAI()
+				.then(() => {
+					console.log('✨ All regions enhanced by AI!');
+					// Odśwież mapę po zakończeniu
+					setTimeout(() => {
+						renderMapCanvas();
+						$ui.errorWarnMsg = "";
+						$ui.successMsg = "✨ World fully generated! ✨";
+						setTimeout(() => $ui.successMsg = "", 3000);
+					}, 100);
+				})
+				.catch(err => {
+					console.error('Background generation failed:', err);
+					$ui.errorWarnMsg = "⚠️ Some regions may have placeholder names";
+					setTimeout(() => {
+						if ($ui.errorWarnMsg === "⚠️ Some regions may have placeholder names") {
+							$ui.errorWarnMsg = "";
+						}
+					}, 5000);
+				});
+			
+			console.log('🌍 World ready (AI generating in background)!');
+			mapGenerated = true;
+		}
 		
 		giveAnswer(answer);
 	}
