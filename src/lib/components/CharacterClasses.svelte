@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte'
 	import { fade, fly } from 'svelte/transition'
+	import { cubicOut } from 'svelte/easing'
 	import { game } from '../../stores'
 
 	const dispatch = createEventDispatcher()
@@ -11,18 +12,18 @@
 	let selectedAvatar = 'warrior'
 	
 	const baseStats = [
-		{ key: 'strength', name: 'STRENGTH', value: 0, icon: '' },
-		{ key: 'dexterity', name: 'DEXTERITY', value: 0, icon: '' },
-		{ key: 'intelligence', name: 'INTELLIGENCE', value: 0, icon: '' },
-		{ key: 'vitality', name: 'VITALITY', value: 0, icon: '' }
+		{ key: 'strength', name: 'STRENGTH', value: 0, icon: '⚔️' },
+		{ key: 'dexterity', name: 'DEXTERITY', value: 0, icon: '🏹' },
+		{ key: 'intelligence', name: 'INTELLIGENCE', value: 0, icon: '🔮' },
+		{ key: 'vitality', name: 'VITALITY', value: 0, icon: '❤️' }
 	]
 	
 	let stats = [...baseStats]
 	let availablePoints = 10
 	
 	const avatars = [
-		{ id: 'warrior', name: '', src: 'images/characters/avatar1.jpg' },
-		{ id: 'mage', name: '', src: 'images/characters/avatar2.jpg' }
+		{ id: 'warrior', name: 'WARRIOR', src: 'images/characters/avatar1.jpg' },
+		{ id: 'mage', name: 'MAGE', src: 'images/characters/avatar2.jpg' }
 	]
 
 	function adjustStat(statKey: string, change: number) {
@@ -48,45 +49,19 @@
 		availablePoints = 10
 	}
 
-	// FUNKCJA DEBUGOWA - automatycznie wypełnia formularz
 	function fillWithTestData() {
 		characterName = 'TestPlayer_' + Math.floor(Math.random() * 1000)
 		selectedAvatar = Math.random() > 0.5 ? 'warrior' : 'mage'
-		
-		// Resetuj statystyki
 		resetStats()
-		
-		// Rozdaj wszystkie punkty (po 2-3 na każdą statystykę)
-		const pointsPerStat = [3, 2, 2, 3] // Razem 10 punktów
+		const pointsPerStat = [3, 2, 2, 3]
 		stats = stats.map((stat, index) => {
 			availablePoints -= pointsPerStat[index]
 			return { ...stat, value: pointsPerStat[index] }
-		})
-		
-		console.log('🎮 TEST MODE - Formularz wypełniony:', {
-			name: characterName,
-			avatar: selectedAvatar,
-			stats: stats.reduce((acc, stat) => {
-				acc[stat.key] = stat.value
-				return acc
-			}, {}),
-			worldPrompt
 		})
 	}
 
 	function emitCharacter() {
 		if (!characterName.trim() || availablePoints > 0) return
-		
-		// Loguj dane przed wysłaniem
-		console.log('📤 Emitting character data:', {
-			name: characterName,
-			avatar: selectedAvatar,
-			stats: stats.reduce((acc, stat) => {
-				acc[stat.key] = stat.value
-				return acc
-			}, {}),
-			worldPrompt
-		})
 		
 		$game.gameData = {
 			...$game.gameData,
@@ -105,670 +80,599 @@
 	}
 </script>
 
-<div class="character-creation">
-	<!-- Przycisk debugowy - zawsze widoczny w prawym górnym rogu -->
-	<button class="debug-btn" on:click={fillWithTestData} title="Auto-fill test data">
-		⚡ TEST MODE
-	</button>
-
-	<!-- Cyberpunk Effects -->
-	<div class="grid-overlay"></div>
-	<div class="glitch-overlay"></div>
-
-	<!-- Neon Header -->
-	<div class="neon-header">
-		<div class="corner top-left"></div>
-		<div class="corner top-right"></div>
-		<div class="corner bottom-left"></div>
-		<div class="corner bottom-right"></div>
-		<div class="cyber-title">
-			<div class="title-glitch" data-text="START JOURNEY">START JOURNEY</div>
-			<div class="title-sub">// CREATE CHARACTER //</div>
-		</div>
+<div class="character-creation" transition:fade={{ duration: 600 }}>
+	<!-- Breathing Liquid Gradient Background -->
+	<div class="liquid-bg">
+		<div class="blob blob-1"></div>
+		<div class="blob blob-2"></div>
+		<div class="blob blob-3"></div>
 	</div>
 
-	<!-- Główna zawartość: dwie kolumny -->
-	<div class="creation-grid">
-		<!-- Lewa kolumna: awatary -->
-		<div class="left-panel">
-			<div class="panel-header">
-				<div class="title-sub" style="display: contents;">// LOADING IDENTITY<div class="title-sub loading-dots"></div> //</div>
-			</div>
+	<!-- Debug Trigger -->
+	<button class="debug-trigger" on:click={fillWithTestData}>
+		<span class="icon">⚡</span>
+		<span class="text">TEST DATA</span>
+	</button>
 
-			<!-- Pole imienia -->
-			<div class="name-field">
-				<label for="hero-name">[DESIGNATION]</label>
-				<input
-					type="text"
-					id="hero-name"
-					bind:value={characterName}
-					placeholder="Player_2v77k"
-					class="name-input"
-				/>
+	<div class="glass-content" in:fly={{ y: 30, duration: 800, easing: cubicOut }}>
+		<header class="creation-header">
+			<div class="header-main">
+				<h2 class="title">IDENTITY FORGE</h2>
+				<div class="badge">AWAITING INPUT</div>
 			</div>
+			<p class="subtitle">Calibrate your neural signature and attributes.</p>
+		</header>
 
-			<!-- Wybór awatara -->
-			<div class="avatars-grid">
-				{#each avatars as avatar}
-					<button
-						class="avatar-card"
-						class:selected={selectedAvatar === avatar.id}
-						on:click={() => selectedAvatar = avatar.id}
-					>
-						<div class="avatar-wrapper">
-							<img src={avatar.src} alt={avatar.id} />
-						</div>
-						<span class="avatar-name">{avatar.name}</span>
-					</button>
-				{/each}
-			</div>
-			<button class="confirm-btn" on:click={emitCharacter} disabled={!characterName.trim() || availablePoints > 0}>
-				<span class="btn-text">ACTIVATE PROTOCOL</span>
-				<span class="btn-icon">▶</span>
-			</button>
-		</div>
+		<div class="creation-layout">
+			<!-- Identity Section -->
+			<section class="identity-section">
+				<div class="field-group">
+					<label for="hero-name">CODED DESIGNATION</label>
+					<input
+						type="text"
+						id="hero-name"
+						bind:value={characterName}
+						placeholder="Enter your name..."
+						class="glass-input"
+					/>
+				</div>
 
-		<!-- Prawa kolumna: statystyki -->
-		<div class="right-panel">
-			<div class="panel-header">
-				<div class="title-sub" style="display: contents;">// MAKING ATTRIBUTES<div class="title-sub loading-dots"></div> //</div>
-			</div>
-
-			<div style="display: flex; justify-content: space-between; align-items: center;" class="points-pool">
-				<span class="pool-label">TECH ATTRIBUTES:</span>
-				<span class="pool-value" class:low={availablePoints <= 3}>{availablePoints}</span>
-			</div>
-
-			<div class="stats-list">
-				{#each stats as stat}
-					<div class="stat-row">
-						<div style="display: flex; justify-content: space-between;">
-							<div class="stat-info">
-								<span class="stat-icon">{stat.icon}</span>
-								<span class="stat-name">{stat.name}</span>
-							</div>
-							
-							<div class="stat-control">
-								<button
-									class="stat-btn minus"
-									on:click={() => adjustStat(stat.key, -1)}
-									disabled={stat.value <= 0}
-								>−</button>
-								
-								<span class="stat-value">{stat.value}</span>
-								
-								<button
-									class="stat-btn plus"
-									on:click={() => adjustStat(stat.key, 1)}
-									disabled={stat.value >= 10 || availablePoints <= 0}
-								>+</button>
-							</div>
-						</div>
-						<div class="stat-bar">
-							<div class="stat-bar-fill" style="width: {stat.value * 10}%"></div>
-						</div>
+				<div class="avatar-selection">
+					<span class="section-label">VISUAL MANIFESTATION</span>
+					<div class="avatars-grid">
+						{#each avatars as avatar}
+							<button
+								class="avatar-card"
+								class:active={selectedAvatar === avatar.id}
+								on:click={() => selectedAvatar = avatar.id}
+							>
+								<div class="avatar-image">
+									<img src={avatar.src} alt={avatar.id} />
+									<div class="selection-overlay"></div>
+								</div>
+								<span class="avatar-label">{avatar.name}</span>
+							</button>
+						{/each}
 					</div>
-				{/each}
-			</div>
+				</div>
+			</section>
+
+			<!-- Attributes Section -->
+			<section class="attributes-section">
+				<div class="points-header">
+					<span class="label">NEURAL ENERGY</span>
+					<div class="points-display">
+						<span class="points-value" class:urgent={availablePoints <= 2}>{availablePoints}</span>
+						<span class="points-unit">U</span>
+					</div>
+				</div>
+
+				<div class="stats-container">
+					{#each stats as stat}
+						<div class="stat-module">
+							<div class="stat-header">
+								<div class="stat-name">
+									<span class="icon">{stat.icon}</span>
+									<span class="text">{stat.name}</span>
+								</div>
+								<div class="stat-controls">
+									<button
+										class="control-btn minus"
+										on:click={() => adjustStat(stat.key, -1)}
+										disabled={stat.value <= 0}
+									>−</button>
+									<span class="current-value">{stat.value}</span>
+									<button
+										class="control-btn plus"
+										on:click={() => adjustStat(stat.key, 1)}
+										disabled={stat.value >= 10 || availablePoints <= 0}
+									>+</button>
+								</div>
+							</div>
+							<div class="stat-progress">
+								<div class="progress-track">
+									<div class="progress-fill" style="width: {stat.value * 10}%"></div>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				<button 
+					class="launch-btn" 
+					on:click={emitCharacter} 
+					disabled={!characterName.trim() || availablePoints > 0}
+				>
+					<div class="btn-content">
+						<span>INITIALIZE SEQUENCE</span>
+						<span class="arrow">→</span>
+					</div>
+				</button>
+			</section>
 		</div>
 	</div>
 </div>
 
 <style>
-	/* Dodaj styl dla przycisku debugowego */
-	.debug-btn {
-		position: fixed;
-		top: 20px;
-		right: 20px;
-		z-index: 1000;
-		background: linear-gradient(135deg, #ff00ff, #00ffff);
-		color: black;
-		border: none;
-		padding: 8px 16px;
-		border-radius: 4px;
-		font-family: 'Share Tech Mono', monospace;
-		font-weight: bold;
-		cursor: pointer;
-		box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
-		transition: all 0.3s ease;
+	:root {
+		--glass-bg: rgba(255, 255, 255, 0.03);
+		--glass-border: rgba(255, 255, 255, 0.08);
+		--accent-primary: #00f2ff;
+		--accent-secondary: #7000ff;
+		--text-main: #e0e0e0;
+		--text-dim: rgba(224, 224, 224, 0.5);
 	}
 
-	.debug-btn:hover {
-		transform: scale(1.05);
-		box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
-	}
-	.loading-dots::after {
-		content: "";
-		display: content;
-		animation: dots 2.5s steps(4, end) infinite;
-	}
-
-	@keyframes dots {
-		0% { content: ""; }
-		25% { content: "."; }
-		50% { content: ".."; }
-		75% { content: "..."; }
-		100% { content: ""; }
-	}
-	/* Pełny ekran, tło */
 	.character-creation {
 		position: relative;
 		width: 100%;
 		min-height: 100%;
 		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 20px;
-		overflow-y: auto;
-		color: #00ffff;
-		font-family: 'Share Tech Mono', 'Courier New', monospace;
-		background: #0a0a0f;
-		box-sizing: border-box;
-	}
-
-	/* Overlay (kopiowane z głównego menu) */
-	.grid-overlay {
-		position: absolute;
-		inset: 0;
-		background-image: 
-			linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 0, 255, 0.05) 1px, transparent 1px);
-		background-size: 50px 50px;
-		pointer-events: none;
-		z-index: 1;
-		animation: gridMove 10s linear infinite;
-	}
-
-	.glitch-overlay {
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(90deg, transparent, rgba(255, 0, 255, 0.1), transparent);
-		animation: glitch 3s infinite;
-		pointer-events: none;
-		z-index: 2;
-	}
-
-	@keyframes gridMove {
-		0% { background-position: 0 0; }
-		100% { background-position: 50px 50px; }
-	}
-
-	@keyframes glitch {
-		0%, 100% { transform: translateX(0); opacity: 0; }
-		10% { transform: translateX(-2px); opacity: 0.3; }
-		20% { transform: translateX(2px); opacity: 0.3; }
-		30% { transform: translateX(0); opacity: 0; }
-	}
-
-	/* Neon Header (identyczny jak w głównym) */
-	.neon-header {
-		position: relative;
-		width: 100%;
-		max-width: 1000px;
-		margin-bottom: 30px;
-		padding: 20px;
-		border: 1px solid #00ffff;
-		background: rgba(0, 0, 0, 0.8);
-		box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-		z-index: 10;
-		box-sizing: border-box;
-	}
-
-	.corner {
-		position: absolute;
-		width: 15px;
-		height: 15px;
-		border-style: solid;
-		border-color: #ff00ff;
-	}
-
-	.corner.top-left {
-		top: -2px;
-		left: -2px;
-		border-width: 2px 0 0 2px;
-	}
-
-	.corner.top-right {
-		top: -2px;
-		right: -2px;
-		border-width: 2px 2px 0 0;
-	}
-
-	.corner.bottom-left {
-		bottom: -2px;
-		left: -2px;
-		border-width: 0 0 2px 2px;
-	}
-
-	.corner.bottom-right {
-		bottom: -2px;
-		right: -2px;
-		border-width: 0 2px 2px 0;
-	}
-
-	.cyber-title {
-		text-align: center;
-	}
-
-	.title-glitch {
-		font-size: 2.5rem;
-		font-weight: bold;
-		color: #00ffff;
-		text-shadow: 
-			-2px -2px 0 #ff00ff,
-			2px 2px 0 #00ffff;
-		animation: glitchText 4s infinite;
-		position: relative;
-		display: inline-block;
-	}
-
-	.title-glitch::before,
-	.title-glitch::after {
-		content: attr(data-text);
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-	}
-
-	.title-glitch::before {
-		animation: glitchBefore 0.4s infinite;
-		color: #ff00ff;
-		z-index: -1;
-	}
-
-	.title-glitch::after {
-		animation: glitchAfter 0.4s infinite;
-		color: #00ffff;
-		z-index: -2;
-	}
-
-	@keyframes glitchText {
-		0%, 100% { transform: skew(0deg); }
-		95% { transform: skew(0deg); }
-		96% { transform: skew(5deg); }
-		97% { transform: skew(-5deg); }
-		98% { transform: skew(0deg); }
-	}
-
-	@keyframes glitchBefore {
-		0%, 100% { transform: translate(0); }
-		10% { transform: translate(-2px, -2px); }
-		20% { transform: translate(2px, 2px); }
-		30% { transform: translate(0); }
-	}
-
-	@keyframes glitchAfter {
-		0%, 100% { transform: translate(0); }
-		10% { transform: translate(2px, 2px); }
-		20% { transform: translate(-2px, -2px); }
-		30% { transform: translate(0); }
-	}
-
-	.title-sub {
-		font-size: 0.9rem;
-		color: #ff00ff;
-		margin-top: 5px;
-		letter-spacing: 2px;
-	}
-
-	/* Siatka dwóch kolumn */
-	.creation-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 25px;
-		width: 100%;
-		max-width: 1000px;
-		margin-bottom: 20px;
-		z-index: 10;
-		position: relative;
-	}
-
-	/* Wspólne style paneli */
-	.left-panel,
-	.right-panel {
-		border: 1px solid #00ffff;
-		background: rgba(0, 0, 0, 0.7);
-		backdrop-filter: blur(5px);
-		padding: 20px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-	}
-
-	.panel-header {
-		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 15px;
-		color: #ff00ff;
-		margin-bottom: 5px;
-		font-size: 1.2rem;
+		padding: 1rem;
+		color: var(--text-main);
+		font-family: 'Inter', system-ui, sans-serif;
+		overflow-x: hidden;
+		overflow-y: auto;
+		box-sizing: border-box;
 	}
 
-	/* Lewy panel */
-	.name-field {
+	/* Swirling Liquid Gradient Background */
+	.liquid-bg {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		filter: blur(80px);
+		opacity: 0.6;
+		pointer-events: none;
+	}
+
+	.blob {
+		position: absolute;
+		border-radius: 50%;
+		animation: swirl 10s infinite linear;
+		mix-blend-mode: screen;
+	}
+
+	.blob-1 { 
+		width: min(500px, 80vw); 
+		height: min(500px, 80vw); 
+		background: var(--accent-secondary); 
+		top: -15%; 
+		left: -10%; 
+		animation-duration: 8s;
+	}
+	
+	.blob-2 { 
+		width: min(450px, 70vw); 
+		height: min(450px, 70vw); 
+		background: var(--accent-primary); 
+		bottom: -15%; 
+		right: -10%; 
+		animation-duration: 12s;
+		animation-delay: -2s; 
+		animation-direction: reverse;
+	}
+	
+	.blob-3 { 
+		width: min(400px, 60vw); 
+		height: min(400px, 60vw); 
+		background: #ff00c8; 
+		top: 30%; 
+		left: 40%; 
+		animation-duration: 10s;
+		animation-delay: -5s; 
+	}
+
+	@keyframes swirl {
+		0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+		33% { transform: translate(15%, 10%) rotate(120deg) scale(1.2); }
+		66% { transform: translate(-10%, 20%) rotate(240deg) scale(0.9); }
+		100% { transform: translate(0, 0) rotate(360deg) scale(1); }
+	}
+
+	/* Debug Tool */
+	.debug-trigger {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		z-index: 100;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--glass-border);
+		padding: 0.5rem 0.8rem;
+		border-radius: 10px;
+		color: var(--text-dim);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.65rem;
+		font-weight: 700;
+		transition: all 0.3s;
+	}
+
+	.debug-trigger:hover {
+		background: rgba(255, 255, 255, 0.1);
+		color: white;
+	}
+
+	/* Glass Content */
+	.glass-content {
+		position: relative;
+		z-index: 10;
+		width: 100%;
+		max-width: 1000px;
+		background: rgba(10, 10, 15, 0.45);
+		backdrop-filter: blur(40px);
+		-webkit-backdrop-filter: blur(40px);
+		border: 1px solid var(--glass-border);
+		border-radius: 32px;
+		padding: 2.5rem;
+		box-sizing: border-box;
+		margin: 1rem 0;
+	}
+
+	.creation-header {
+		margin-bottom: 2rem;
+	}
+
+	.header-main {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.title {
+		font-size: clamp(1.5rem, 5vw, 2.2rem);
+		font-weight: 800;
+		letter-spacing: -0.04em;
+		margin: 0;
+		background: linear-gradient(to right, #fff, #888);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+	}
+
+	.badge {
+		font-size: 0.65rem;
+		font-weight: 800;
+		padding: 0.2rem 0.8rem;
+		background: rgba(0, 242, 255, 0.1);
+		color: var(--accent-primary);
+		border-radius: 20px;
+		font-family: monospace;
+		letter-spacing: 0.05em;
+	}
+
+	.subtitle {
+		font-size: clamp(0.85rem, 2vw, 1rem);
+		color: var(--text-dim);
+		margin: 0;
+	}
+
+	/* Layout */
+	.creation-layout {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2.5rem;
+	}
+
+	/* Identity Section */
+	.identity-section {
 		display: flex;
 		flex-direction: column;
-		gap: 5px;
+		gap: 1.5rem;
 	}
 
-	.name-field label {
-		font-size: 0.8rem;
-		color: #ff00ff;
-		letter-spacing: 1px;
+	.field-group label, .section-label {
+		display: block;
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-dim);
+		margin-bottom: 0.8rem;
+		letter-spacing: 0.1em;
 	}
 
-	.name-input {
-		background: rgba(0, 0, 0, 0.5);
-		border: 1px solid #00ffff;
-		padding: 12px 15px;
-		font-size: 1rem;
-		color: #00ffff;
+	.glass-input {
+		width: 100%;
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid var(--glass-border);
+		border-radius: 16px;
+		padding: 1rem;
+		color: white;
 		font-family: inherit;
+		font-size: 1rem;
+		transition: all 0.3s;
+		box-sizing: border-box;
+	}
+
+	.glass-input:focus {
 		outline: none;
-		transition: all 0.2s ease;
-	}
-
-	.name-input:focus {
-		border-color: #ff00ff;
-		box-shadow: 0 0 15px #ff00ff;
-	}
-
-	.name-input::placeholder {
-		color: rgba(0, 255, 255, 0.3);
+		border-color: rgba(0, 242, 255, 0.3);
+		background: rgba(255, 255, 255, 0.06);
 	}
 
 	.avatars-grid {
-		display: flex;
-		gap: 20px;
-		justify-content: center;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
 	}
 
 	.avatar-card {
-		background: transparent;
-		border: 2px solid #00ffff;
-		padding: 10px;
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid var(--glass-border);
+		border-radius: 20px;
+		padding: 0.6rem;
 		cursor: pointer;
-		transition: all 0.3s ease;
+		transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 		display: flex;
 		flex-direction: column;
+		gap: 0.8rem;
 		align-items: center;
-		gap: 8px;
-		box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
 	}
 
-	.avatar-card.selected {
-		border-color: #ff00ff;
-		box-shadow: 0 0 20px #ff00ff;
+	.avatar-card:hover {
+		background: rgba(255, 255, 255, 0.08);
+		transform: translateY(-4px);
 	}
 
-	.avatar-wrapper {
-		width: 100px;
-		height: 100px;
+	.avatar-card.active {
+		background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(112, 0, 255, 0.1));
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+	}
+
+	.avatar-image {
+		width: 100%;
+		aspect-ratio: 1;
+		border-radius: 12px;
 		overflow: hidden;
+		position: relative;
 	}
 
-	.avatar-wrapper img {
+	.avatar-image img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		filter: grayscale(50%) contrast(120%);
+		transition: transform 0.6s;
 	}
 
-	.avatar-name {
-		color: #00ffff;
-		font-size: 0.8rem;
+	.avatar-label {
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		color: var(--text-dim);
 	}
 
-	/* Prawy panel */
-	.points-pool {
+	.avatar-card.active .avatar-label {
+		color: var(--accent-primary);
+	}
+
+	/* Attributes Section */
+	.attributes-section {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.points-header {
 		display: flex;
 		justify-content: space-between;
-		padding: 8px 12px;
-		border: 1px solid #00ffff;
-		background: rgba(0, 255, 255, 0.05);
-		margin-bottom: 10px;
+		align-items: flex-end;
+		padding-bottom: 0.8rem;
+		border-bottom: 1px solid var(--glass-border);
 	}
 
-	.pool-label {
-		color: #00ffff;
+	.points-header .label {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-dim);
+		letter-spacing: 0.1em;
 	}
 
-	.pool-value {
-		color: #ff00ff;
-		font-weight: bold;
-		font-size: 1.2rem;
+	.points-display {
+		display: flex;
+		align-items: baseline;
+		gap: 0.3rem;
 	}
 
-	.pool-value.low {
-		color: #ff00ff;
-		text-shadow: 0 0 10px #ff00ff;
+	.points-value {
+		font-size: 2rem;
+		font-weight: 800;
+		line-height: 1;
+		color: var(--accent-primary);
 	}
 
-	.stats-list {
+	.points-value.urgent {
+		color: #ff3e3e;
+		text-shadow: 0 0 15px rgba(255, 62, 62, 0.4);
+	}
+
+	.points-unit {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-dim);
+	}
+
+	.stats-container {
 		display: flex;
 		flex-direction: column;
-		gap: 15px;
-		margin-bottom: 20px;
+		gap: 1.2rem;
 	}
 
-	.stat-row {
+	.stat-module {
 		display: flex;
 		flex-direction: column;
-		gap: 5px;
+		gap: 0.6rem;
 	}
 
-	.stat-info {
+	.stat-header {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		gap: 10px;
-	}
-
-	.stat-icon {
-		font-size: 1.2rem;
+		gap: 0.5rem;
 	}
 
 	.stat-name {
-		font-size: 0.9rem;
-		color: #00ffff;
-		letter-spacing: 1px;
-	}
-
-	.stat-control {
 		display: flex;
 		align-items: center;
-		gap: 15px;
-		justify-content: flex-end;
+		gap: 0.6rem;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
 	}
 
-	.stat-btn {
-		width: 35px;
-		height: 35px;
+	.stat-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		background: rgba(255, 255, 255, 0.03);
+		padding: 0.3rem;
+		border-radius: 10px;
+		border: 1px solid var(--glass-border);
+	}
+
+	.control-btn {
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		border: 1px solid var(--glass-border);
 		background: transparent;
-		border: 1px solid #00ffff;
-		color: #00ffff;
-		font-size: 1.5rem;
-		font-weight: bold;
+		color: white;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: all 0.2s ease;
+		font-size: 1.1rem;
+		transition: all 0.2s;
 	}
 
-	.stat-btn:hover:not(:disabled) {
-		background: #00ffff;
-		color: #000;
-		box-shadow: 0 0 15px #00ffff;
+	.control-btn:hover:not(:disabled) {
+		background: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.4);
 	}
 
-	.stat-btn:disabled {
+	.control-btn:disabled {
+		opacity: 0.15;
+		cursor: not-allowed;
+	}
+
+	.current-value {
+		font-size: 1.1rem;
+		font-weight: 800;
+		color: var(--accent-primary);
+		min-width: 1.2rem;
+		text-align: center;
+		font-family: monospace;
+	}
+
+	.stat-progress {
+		height: 3px;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 2px;
+		overflow: hidden;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+		transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+	}
+
+	/* Launch Button */
+	.launch-btn {
+		margin-top: 1rem;
+		background: linear-gradient(135deg, rgba(0, 242, 255, 0.15), rgba(112, 0, 255, 0.15));
+		border: 1px solid rgba(0, 242, 255, 0.3);
+		padding: 1rem;
+		border-radius: 16px;
+		color: var(--accent-primary);
+		font-weight: 800;
+		font-size: 0.95rem;
+		letter-spacing: 0.1em;
+		cursor: pointer;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.launch-btn:hover:not(:disabled) {
+		background: linear-gradient(135deg, rgba(0, 242, 255, 0.25), rgba(112, 0, 255, 0.25));
+		transform: translateY(-2px);
+		box-shadow: 0 10px 30px -10px rgba(0, 242, 255, 0.3);
+		border-color: var(--accent-primary);
+	}
+
+	.launch-btn:disabled {
 		opacity: 0.3;
 		cursor: not-allowed;
-		border-color: rgba(0, 255, 255, 0.3);
+		filter: grayscale(1);
 	}
 
-	.stat-value {
-		min-width: 30px;
-		text-align: center;
-		font-size: 1.3rem;
-		font-weight: bold;
-		color: #ff00ff;
-	}
-
-	.stat-bar {
-		width: 100%;
-		height: 6px;
-		background: rgba(0, 255, 255, 0.2);
-		border: 1px solid #00ffff;
-	}
-
-	.stat-bar-fill {
-		height: 100%;
-		background: linear-gradient(90deg, #00ffff, #ff00ff);
-		width: 0%;
-		transition: width 0.2s ease;
-	}
-
-	.confirm-btn {
-		background: transparent;
-		border: 1px solid #00ffff;
-		padding: 15px 25px;
-		font-size: 1.1rem;
-		font-weight: bold;
-		color: #00ffff;
-		cursor: pointer;
+	.btn-content {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 15px;
-		transition: all 0.3s ease;
-		text-transform: uppercase;
-		letter-spacing: 2px;
-		width: 100%;
-		margin-top: auto; /* przykleja przycisk na dole */
+		gap: 0.8rem;
 	}
 
-	.confirm-btn:hover:not(:disabled) {
-		background: #00ffff;
-		color: #000;
-		box-shadow: 0 0 30px #00ffff;
+	.arrow {
+		font-size: 1.1rem;
+		transition: transform 0.3s;
 	}
 
-	.confirm-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
-		border-color: rgba(0, 255, 255, 0.3);
+	.launch-btn:hover .arrow {
+		transform: translateX(5px);
 	}
 
-	.btn-icon {
-		font-size: 1.2rem;
-	}
-
-	/* Responsywność: na małych ekranach kolumny pod sobą */
-	@media (max-width: 700px) {
-		.creation-grid {
-			grid-template-columns: 1fr;
-			gap: 20px;
-		}
-
-		.title-glitch {
-			font-size: 2rem;
-		}
-	}
-	/* Wersja tablet */
-	@media (max-width: 1024px) {
-		.creation-grid {
-			grid-template-columns: 1fr;
-			gap: 20px;
+	/* Responsive Refinement */
+	@media (max-width: 850px) {
+		.creation-layout { 
+			grid-template-columns: 1fr; 
+			gap: 2rem; 
 		}
 		
-		.neon-header {
-			max-width: 90%;
+		.glass-content { 
+			padding: 1.5rem; 
+			border-radius: 24px;
+		}
+
+		.identity-section {
+			border-bottom: 1px solid var(--glass-border);
+			padding-bottom: 2rem;
+		}
+
+		.launch-btn {
+			padding: 1.2rem;
 		}
 	}
 
-	/* Wersja mobilna */
-	@media (max-width: 768px) {
-		.character-creation {
-			padding: 10px;
-		}
-		
-		.creation-grid {
-			gap: 15px;
-		}
-		
-		.left-panel, .right-panel {
-			padding: 15px;
-		}
-		
-		.avatars-grid {
-			flex-direction: column;
-			align-items: center;
-			gap: 15px;
-		}
-		
-		.avatar-card {
-			width: 100%;
-			max-width: 120px;
-		}
-		
-		.avatar-wrapper {
-			width: 80px;
-			height: 80px;
-		}
-		
-		.stat-name {
-			font-size: 0.8rem;
-		}
-		
-		.stat-btn {
-			width: 30px;
-			height: 30px;
-			font-size: 1.2rem;
-		}
-		
-		.stat-value {
-			font-size: 1.1rem;
-		}
-		
-		.confirm-btn {
-			padding: 12px 20px;
-			font-size: 0.9rem;
-		}
-		
-		.title-glitch {
-			font-size: 1.8rem;
-		}
-		
-		.title-sub {
-			font-size: 0.7rem;
-		}
-	}
-
-	/* Bardzo małe telefony */
 	@media (max-width: 480px) {
-		.title-glitch {
-			font-size: 1.4rem;
+		.glass-content {
+			padding: 1.2rem;
+			border-radius: 20px;
 		}
-		
-		.name-input {
-			padding: 8px 12px;
-			font-size: 0.9rem;
+
+		.avatars-grid {
+			gap: 0.8rem;
 		}
-		
-		.pool-label, .pool-value {
-			font-size: 0.8rem;
+
+		.avatar-card {
+			padding: 0.5rem;
 		}
-		
-		.stat-name {
-			font-size: 0.7rem;
+
+		.stat-controls {
+			gap: 0.5rem;
 		}
-		
-		.stat-control {
-			gap: 8px;
+
+		.control-btn {
+			width: 26px;
+			height: 26px;
+		}
+
+		.points-value {
+			font-size: 1.8rem;
 		}
 	}
 </style>

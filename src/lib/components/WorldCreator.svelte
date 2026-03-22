@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte'
 	import { fade, fly } from 'svelte/transition'
+	import { cubicOut } from 'svelte/easing'
 	
 	const dispatch = createEventDispatcher()
 	
@@ -9,13 +10,12 @@
 	let generatedWorldPrompt = ''
 	let error = ''
 	
-	// Przykładowe sugestie
 	const suggestions = [
-		'cyberpunk z dinozaurami',
-		'horror w kosmosie',
-		'steampunk w epoce wiktoriańskiej',
-		'post-apokalipsa z magią',
-		'świat, gdzie ludzie żyją w chmurach'
+		'Cyberpunk with dinosaurs',
+		'Space horror',
+		'Victorian Steampunk',
+		'Post-apocalypse magic',
+		'Cities in the clouds'
 	]
 	
 	async function generateWorld() {
@@ -41,11 +41,8 @@
 			
 			const data = await response.json()
 			generatedWorldPrompt = data.worldPrompt
-			console.log('Generated world:', generatedWorldPrompt)
-			
 		} catch (err) {
 			error = 'Failed to generate world. Try again.'
-			console.error(err)
 		} finally {
 			isGenerating = false
 		}
@@ -74,10 +71,8 @@
 			
 			const data = await response.json()
 			generatedWorldPrompt = data.worldPrompt
-			
 		} catch (err) {
 			error = 'Failed to generate world. Try again.'
-			console.error(err)
 		} finally {
 			isGenerating = false
 		}
@@ -97,525 +92,454 @@
 	}
 </script>
 
-<div class="world-creator" transition:fade={{ duration: 400 }}>
-	<!-- Cyberpunk Effects (takie same jak w innych ekranach) -->
-	<div class="grid-overlay"></div>
-	<div class="glitch-overlay"></div>
-	
-	<!-- Neon Header -->
-	<div class="neon-header">
-		<div class="corner top-left"></div>
-		<div class="corner top-right"></div>
-		<div class="corner bottom-left"></div>
-		<div class="corner bottom-right"></div>
-		
-		<div class="cyber-title">
-			<div class="title-glitch" data-text="WORLD CREATOR">WORLD CREATOR</div>
-			<div class="title-sub">// GENERATE CUSTOM UNIVERSE //</div>
-		</div>
+<div class="world-creator" transition:fade={{ duration: 600 }}>
+	<!-- Breathing Liquid Gradient Background -->
+	<div class="liquid-bg">
+		<div class="blob blob-primary"></div>
+		<div class="blob blob-secondary"></div>
 	</div>
-	
-	<!-- Główny kontener -->
-	<div class="creator-container" in:fly={{ y: 20, duration: 600 }}>
-		
-		{#if !generatedWorldPrompt}
-			<!-- Krok 1: Wpisz pomysł -->
-			<div class="input-section">
-				<label for="world-prompt">DESCRIBE YOUR WORLD</label>
-				<textarea
-					id="world-prompt"
-					bind:value={userPrompt}
-					placeholder="e.g., dark fantasy with lovecraftian horror, or cyberpunk world where dinosaurs never went extinct..."
-					class="world-input"
-					rows="4"
-				></textarea>
-				
-				<!-- Sugestie -->
-				<div class="suggestions">
-					<span class="suggestions-label">SUGGESTIONS:</span>
-					<div class="suggestion-tags">
-						{#each suggestions as suggestion}
-							<button 
-								class="suggestion-tag"
-								on:click={() => useSuggestion(suggestion)}
-							>
-								{suggestion}
-							</button>
-						{/each}
-					</div>
-				</div>
-				
-				{#if error}
-					<div class="error-message">⚠ {error}</div>
-				{/if}
-				
-				<div class="buttons-row">
-					<button 
-						class="generate-btn" 
-						on:click={generateWorld}
-						disabled={isGenerating || !userPrompt.trim()}
-					>
-						{#if isGenerating}
-							<span class="btn-text">GENERATING</span>
-							<span class="loading-dots">...</span>
-						{:else}
-							<span class="btn-text">GENERATE (AI)</span>
-							<span class="btn-icon">→</span>
-						{/if}
-					</button>
 
-					<button 
-						class="generate-btn static-btn" 
-						on:click={generateStaticWorld}
-						disabled={isGenerating || !userPrompt.trim()}
-					>
-						<span class="btn-text">USE STATIC</span>
-						<span class="btn-icon">⚡</span>
-					</button>
-				</div>
+	<div class="glass-content" in:fly={{ y: 30, duration: 800, easing: cubicOut }}>
+		<header class="creator-header">
+			<div class="header-main">
+				<h2 class="title">COSMOS ARCHITECT</h2>
+				<div class="badge">SYSTEM READY</div>
 			</div>
-		{:else}
-			<!-- Krok 2: Podgląd wygenerowanego świata -->
-			<div class="result-section">
-				<div class="result-header">
-					<span class="header-icon">◈</span>
-					<span class="header-text">WORLD PROTOCOL GENERATED</span>
-					<span class="header-icon">◈</span>
-				</div>
-				
-				<div class="world-prompt-display">
-					<p class="prompt-text">{generatedWorldPrompt}</p>
-				</div>
-				
-				<div class="world-stats">
-					<div class="stat-item">
-						<span class="stat-label">STATUS:</span>
-						<span class="stat-value online">READY</span>
+			<p class="subtitle">Define the parameters of your reality.</p>
+		</header>
+
+		<div class="layout-main">
+			{#if !generatedWorldPrompt}
+				<div class="input-area" in:fade={{ duration: 400 }}>
+					<div class="field-group">
+						<label for="world-prompt">FOUNDATION PROMPT</label>
+						<textarea
+							id="world-prompt"
+							bind:value={userPrompt}
+							placeholder="Describe your universe..."
+							class="glass-textarea"
+							rows="4"
+						></textarea>
 					</div>
-					<div class="stat-item">
-						<span class="stat-label">TYPE:</span>
-						<span class="stat-value">{userPrompt.toUpperCase()}</span>
+
+					<div class="suggestions-container">
+						<span class="label">SEED IDEAS</span>
+						<div class="tags">
+							{#each suggestions as suggestion}
+								<button class="tag" on:click={() => useSuggestion(suggestion)}>
+									{suggestion}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					{#if error}
+						<div class="error-box">
+							<span class="icon">⚠</span>
+							<p>{error}</p>
+						</div>
+					{/if}
+
+					<div class="action-grid">
+						<button 
+							class="glass-btn primary" 
+							on:click={generateWorld}
+							disabled={isGenerating || !userPrompt.trim()}
+						>
+							<div class="btn-inner">
+								{#if isGenerating}
+									<span class="loading-spinner"></span>
+									<span>COMPUTING...</span>
+								{:else}
+									<span class="icon">✨</span>
+									<span>AI SYNTHESIS</span>
+								{/if}
+							</div>
+						</button>
+
+						<button 
+							class="glass-btn secondary" 
+							on:click={generateStaticWorld}
+							disabled={isGenerating || !userPrompt.trim()}
+						>
+							<div class="btn-inner">
+								<span class="icon">⚡</span>
+								<span>STATIC LOAD</span>
+							</div>
+						</button>
 					</div>
 				</div>
-				
-				<div class="action-buttons">
-					<button class="secondary-btn" on:click={regenerate}>
-						<span class="btn-icon">↺</span>
-						REGENERATE
-					</button>
-					
-					<button class="primary-btn" on:click={acceptWorld}>
-						<span class="btn-text">ACCEPT WORLD</span>
-						<span class="btn-icon">▶</span>
-					</button>
+			{:else}
+				<div class="result-area" in:fade={{ duration: 400 }}>
+					<div class="protocol-card">
+						<div class="card-header">
+							<span class="tag">OUTPUT PROTOCOL</span>
+							<span class="status online">STABLE</span>
+						</div>
+						
+						<div class="scroll-container">
+							<p class="prompt-text">{generatedWorldPrompt}</p>
+						</div>
+
+						<div class="card-footer">
+							<div class="meta-item">
+								<span class="label">SOURCE:</span>
+								<span class="value">NEURAL_GEN_V2</span>
+							</div>
+							<div class="meta-item">
+								<span class="label">TYPE:</span>
+								<span class="value">{userPrompt.slice(0, 20)}...</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="action-grid">
+						<button class="glass-btn secondary" on:click={regenerate}>
+							<div class="btn-inner">
+								<span class="icon">↺</span>
+								<span>RE-GENERATE</span>
+							</div>
+						</button>
+						
+						<button class="glass-btn success" on:click={acceptWorld}>
+							<div class="btn-inner">
+								<span class="icon">▶</span>
+								<span>INITIALIZE WORLD</span>
+							</div>
+						</button>
+					</div>
 				</div>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </div>
 
 <style>
+	:root {
+		--glass-bg: rgba(255, 255, 255, 0.03);
+		--glass-border: rgba(255, 255, 255, 0.1);
+		--accent-primary: #00f2ff;
+		--accent-secondary: #7000ff;
+		--success: #00ffaa;
+		--text-main: #e0e0e0;
+		--text-dim: rgba(224, 224, 224, 0.5);
+	}
+
 	.world-creator {
 		position: relative;
 		width: 100%;
-		min-height: 100%;
+		min-height: 400px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		padding: 20px;
-		color: #00ffff;
-		font-family: 'Share Tech Mono', 'Courier New', monospace;
-		background: #0a0a0f;
-		box-sizing: border-box;
+		justify-content: center;
+		color: var(--text-main);
+		font-family: 'Inter', system-ui, sans-serif;
+		overflow: hidden;
+		border-radius: 24px;
 	}
-	
-	/* Overlay - kopiuj z poprzednich komponentów */
-	.grid-overlay {
+
+	/* Swirling Liquid Gradient Background */
+	.liquid-bg {
 		position: absolute;
 		inset: 0;
-		background-image: 
-			linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
-			linear-gradient(90deg, rgba(255, 0, 255, 0.05) 1px, transparent 1px);
-		background-size: 50px 50px;
+		z-index: 0;
+		filter: blur(80px);
+		opacity: 0.6;
 		pointer-events: none;
-		z-index: 1;
-		animation: gridMove 10s linear infinite;
 	}
-	
-	.glitch-overlay {
+
+	.blob {
 		position: absolute;
-		inset: 0;
-		background: linear-gradient(90deg, transparent, rgba(255, 0, 255, 0.1), transparent);
-		animation: glitch 3s infinite;
-		pointer-events: none;
-		z-index: 2;
+		border-radius: 50%;
+		animation: swirl 12s infinite linear;
+		mix-blend-mode: screen;
 	}
-	
-	@keyframes gridMove {
-		0% { background-position: 0 0; }
-		100% { background-position: 50px 50px; }
+
+	.blob-primary {
+		width: min(450px, 70vw);
+		height: min(450px, 70vw);
+		background: var(--accent-primary);
+		top: -10%;
+		left: -10%;
+		animation-duration: 9s;
 	}
-	
-	@keyframes glitch {
-		0%, 100% { transform: translateX(0); opacity: 0; }
-		10% { transform: translateX(-2px); opacity: 0.3; }
-		20% { transform: translateX(2px); opacity: 0.3; }
-		30% { transform: translateX(0); opacity: 0; }
+
+	.blob-secondary {
+		width: min(400px, 60vw);
+		height: min(400px, 60vw);
+		background: var(--accent-secondary);
+		bottom: -10%;
+		right: -10%;
+		animation-duration: 14s;
+		animation-delay: -3s;
+		animation-direction: reverse;
 	}
-	
-	/* Neon Header - kopiuj z poprzednich */
-	.neon-header {
-		position: relative;
-		width: 100%;
-		max-width: 700px;
-		margin-bottom: 20px;
-		padding: 20px;
-		border: 1px solid #00ffff;
-		background: rgba(0, 0, 0, 0.8);
-		box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-		z-index: 10;
-		box-sizing: border-box;
+
+	@keyframes swirl {
+		0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+		33% { transform: translate(10%, 15%) rotate(120deg) scale(1.1); }
+		66% { transform: translate(-15%, 5%) rotate(240deg) scale(0.9); }
+		100% { transform: translate(0, 0) rotate(360deg) scale(1); }
 	}
-	
-	.corner {
-		position: absolute;
-		width: 15px;
-		height: 15px;
-		border-style: solid;
-		border-color: #ff00ff;
-	}
-	
-	.corner.top-left {
-		top: -2px;
-		left: -2px;
-		border-width: 2px 0 0 2px;
-	}
-	
-	.corner.top-right {
-		top: -2px;
-		right: -2px;
-		border-width: 2px 2px 0 0;
-	}
-	
-	.corner.bottom-left {
-		bottom: -2px;
-		left: -2px;
-		border-width: 0 0 2px 2px;
-	}
-	
-	.corner.bottom-right {
-		bottom: -2px;
-		right: -2px;
-		border-width: 0 2px 2px 0;
-	}
-	
-	.cyber-title {
-		text-align: center;
-	}
-	
-	.title-glitch {
-		font-size: 2.2rem;
-		font-weight: bold;
-		color: #00ffff;
-		text-shadow: 
-			-2px -2px 0 #ff00ff,
-			2px 2px 0 #00ffff;
-		animation: glitchText 4s infinite;
-		position: relative;
-		display: inline-block;
-	}
-	
-	.title-glitch::before,
-	.title-glitch::after {
-		content: attr(data-text);
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-	}
-	
-	.title-glitch::before {
-		animation: glitchBefore 0.4s infinite;
-		color: #ff00ff;
-		z-index: -1;
-	}
-	
-	.title-glitch::after {
-		animation: glitchAfter 0.4s infinite;
-		color: #00ffff;
-		z-index: -2;
-	}
-	
-	@keyframes glitchText {
-		0%, 100% { transform: skew(0deg); }
-		95% { transform: skew(0deg); }
-		96% { transform: skew(5deg); }
-		97% { transform: skew(-5deg); }
-		98% { transform: skew(0deg); }
-	}
-	
-	@keyframes glitchBefore {
-		0%, 100% { transform: translate(0); }
-		10% { transform: translate(-2px, -2px); }
-		20% { transform: translate(2px, 2px); }
-		30% { transform: translate(0); }
-	}
-	
-	@keyframes glitchAfter {
-		0%, 100% { transform: translate(0); }
-		10% { transform: translate(2px, 2px); }
-		20% { transform: translate(-2px, -2px); }
-		30% { transform: translate(0); }
-	}
-	
-	.title-sub {
-		font-size: 0.8rem;
-		color: #ff00ff;
-		margin-top: 5px;
-		letter-spacing: 2px;
-	}
-	
-	/* Główny kontener */
-	.creator-container {
-		width: 100%;
-		max-width: 700px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-		padding: 30px;
-		margin-bottom: 20px;
-		border: 1px solid #00ffff;
-		background: rgba(0, 0, 0, 0.7);
-		backdrop-filter: blur(5px);
-		box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+
+	/* Content Container */
+	.glass-content {
 		position: relative;
 		z-index: 10;
+		width: 100%;
+		max-width: 800px;
+		background: rgba(10, 10, 15, 0.3);
+		backdrop-filter: blur(20px);
+		border: 1px solid var(--glass-border);
+		border-radius: 32px;
+		padding: 2.5rem;
 		box-sizing: border-box;
 	}
-	
-	/* Input section */
-	.input-section {
+
+	.creator-header {
+		margin-bottom: 2rem;
+	}
+
+	.header-main {
 		display: flex;
-		flex-direction: column;
-		gap: 20px;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 0.5rem;
 	}
-	
-	.input-section label {
-		font-size: 0.9rem;
-		color: #ff00ff;
-		letter-spacing: 2px;
+
+	.title {
+		font-size: 1.8rem;
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		margin: 0;
+		background: linear-gradient(to right, #fff, #aaa);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
 	}
-	
-	.world-input {
-		background: rgba(0, 0, 0, 0.5);
-		border: 1px solid #00ffff;
-		padding: 15px;
-		font-size: 1rem;
-		color: #00ffff;
+
+	.badge {
+		font-size: 0.65rem;
+		font-weight: 700;
+		padding: 0.2rem 0.6rem;
+		background: rgba(0, 242, 255, 0.1);
+		color: var(--accent-primary);
+		border-radius: 20px;
+		font-family: monospace;
+	}
+
+	.subtitle {
+		font-size: 0.95rem;
+		color: var(--text-dim);
+		margin: 0;
+	}
+
+	/* Form Elements */
+	.field-group {
+		margin-bottom: 1.5rem;
+	}
+
+	.field-group label {
+		display: block;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--text-dim);
+		margin-bottom: 0.8rem;
+		letter-spacing: 0.1em;
+	}
+
+	.glass-textarea {
+		width: 100%;
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid var(--glass-border);
+		border-radius: 16px;
+		padding: 1rem;
+		color: white;
 		font-family: inherit;
-		resize: vertical;
+		font-size: 1rem;
+		resize: none;
+		transition: all 0.3s;
+		box-sizing: border-box;
+	}
+
+	.glass-textarea:focus {
 		outline: none;
-		transition: all 0.2s ease;
+		border-color: rgba(255, 255, 255, 0.3);
+		background: rgba(255, 255, 255, 0.06);
 	}
-	
-	.world-input:focus {
-		border-color: #ff00ff;
-		box-shadow: 0 0 20px #ff00ff;
+
+	.suggestions-container {
+		margin-bottom: 2rem;
 	}
-	
-	.world-input::placeholder {
-		color: rgba(0, 255, 255, 0.3);
+
+	.suggestions-container .label {
+		font-size: 0.7rem;
+		color: var(--text-dim);
+		display: block;
+		margin-bottom: 0.8rem;
 	}
-	
-	/* Sugestie */
-	.suggestions {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-	}
-	
-	.suggestions-label {
-		font-size: 0.8rem;
-		color: rgba(0, 255, 255, 0.6);
-	}
-	
-	.suggestion-tags {
+
+	.tags {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 10px;
+		gap: 0.6rem;
 	}
-	
-	.suggestion-tag {
-		background: transparent;
-		border: 1px solid #00ffff;
-		padding: 6px 12px;
-		color: #00ffff;
+
+	.tag {
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		padding: 0.4rem 0.8rem;
+		border-radius: 12px;
+		color: var(--text-dim);
 		font-size: 0.8rem;
 		cursor: pointer;
-		transition: all 0.2s ease;
+		transition: all 0.2s;
 	}
-	
-	.suggestion-tag:hover {
-		background: #00ffff;
-		color: #000;
-		box-shadow: 0 0 15px #00ffff;
+
+	.tag:hover {
+		background: rgba(255, 255, 255, 0.08);
+		color: white;
+		border-color: rgba(255, 255, 255, 0.2);
 	}
-	
-	/* Error message */
-	.error-message {
-		color: #ff00ff;
-		font-size: 0.9rem;
-		padding: 10px;
-		border: 1px solid #ff00ff;
-		background: rgba(255, 0, 255, 0.1);
+
+	/* Buttons */
+	.action-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
 	}
-	
-	/* Generate button */
-	.generate-btn {
-		background: transparent;
-		border: 1px solid #00ffff;
-		padding: 15px;
-		font-size: 1.1rem;
-		font-weight: bold;
-		color: #00ffff;
+
+	.glass-btn {
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		border-radius: 16px;
+		padding: 1rem;
 		cursor: pointer;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		color: white;
+		font-weight: 600;
+	}
+
+	.glass-btn:hover:not(:disabled) {
+		transform: translateY(-2px);
+		border-color: rgba(255, 255, 255, 0.2);
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	.glass-btn.primary {
+		background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(112, 0, 255, 0.1));
+		border-color: rgba(0, 242, 255, 0.2);
+	}
+
+	.glass-btn.success {
+		background: rgba(0, 255, 170, 0.1);
+		border-color: rgba(0, 255, 170, 0.3);
+		color: var(--success);
+	}
+
+	.btn-inner {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 15px;
-		transition: all 0.3s ease;
-		text-transform: uppercase;
-		letter-spacing: 2px;
-		margin-top: 10px;
+		gap: 0.8rem;
 	}
-	
-	.generate-btn:hover:not(:disabled) {
-		background: #00ffff;
-		color: #000;
-		box-shadow: 0 0 30px #00ffff;
-	}
-	
-	.generate-btn:disabled {
+
+	.glass-btn:disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
 	}
-	
-	.loading-dots {
-		animation: blink 1s infinite;
+
+	/* Result Protocol Card */
+	.protocol-card {
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid var(--glass-border);
+		border-radius: 20px;
+		padding: 1.5rem;
+		margin-bottom: 2rem;
 	}
-	
-	/* Result section */
-	.result-section {
+
+	.card-header {
 		display: flex;
-		flex-direction: column;
-		gap: 25px;
+		justify-content: space-between;
+		margin-bottom: 1.5rem;
 	}
-	
-	.result-header {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 15px;
-		color: #ff00ff;
+
+	.status.online {
+		color: var(--success);
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.1em;
 	}
-	
-	.world-prompt-display {
-		padding: 20px;
-		border: 1px solid #00ffff;
-		background: rgba(0, 255, 255, 0.05);
+
+	.scroll-container {
+		max-height: 200px;
+		overflow-y: auto;
+		margin-bottom: 1.5rem;
+		padding-right: 1rem;
 	}
-	
+
 	.prompt-text {
-		color: #00ffff;
 		font-size: 1rem;
 		line-height: 1.6;
 		margin: 0;
+		color: rgba(255, 255, 255, 0.9);
 	}
-	
-	.world-stats {
+
+	.card-footer {
 		display: flex;
-		justify-content: space-between;
-		padding: 15px;
-		border: 1px solid #00ffff;
-		background: rgba(0, 0, 0, 0.5);
+		gap: 2rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--glass-border);
 	}
-	
-	.stat-item {
+
+	.meta-item {
 		display: flex;
-		gap: 10px;
+		flex-direction: column;
+		gap: 0.2rem;
 	}
-	
-	.stat-label {
-		color: #ff00ff;
+
+	.meta-item .label {
+		font-size: 0.6rem;
+		color: var(--text-dim);
+		font-weight: 700;
 	}
-	
-	.stat-value {
-		color: #00ffff;
+
+	.meta-item .value {
+		font-size: 0.75rem;
+		font-family: monospace;
+		color: var(--accent-primary);
 	}
-	
-	.stat-value.online {
-		color: #00ff00;
-		text-shadow: 0 0 10px #00ff00;
-	}
-	
-	.action-buttons {
-		display: flex;
-		gap: 15px;
-	}
-	
-	.primary-btn, .secondary-btn {
-		flex: 1;
-		padding: 15px;
-		font-size: 1rem;
-		font-weight: bold;
-		cursor: pointer;
+
+	/* Utils */
+	.error-box {
+		background: rgba(255, 50, 50, 0.1);
+		border: 1px solid rgba(255, 50, 50, 0.2);
+		border-radius: 12px;
+		padding: 1rem;
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		gap: 10px;
-		transition: all 0.3s ease;
-		text-transform: uppercase;
-		letter-spacing: 1px;
+		gap: 0.8rem;
+		margin-bottom: 1.5rem;
+		color: #ff8888;
 	}
-	
-	.primary-btn {
-		background: transparent;
-		border: 1px solid #00ffff;
-		color: #00ffff;
+
+	.error-box p { margin: 0; font-size: 0.9rem; }
+
+	.loading-spinner {
+		width: 16px;
+		height: 16px;
+		border: 2px solid rgba(255, 255, 255, 0.1);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
 	}
-	
-	.primary-btn:hover {
-		background: #00ffff;
-		color: #000;
-		box-shadow: 0 0 30px #00ffff;
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
-	
-	.secondary-btn {
-		background: transparent;
-		border: 1px solid #ff00ff;
-		color: #ff00ff;
-	}
-	
-	.secondary-btn:hover {
-		background: #ff00ff;
-		color: #000;
-		box-shadow: 0 0 30px #ff00ff;
-	}
-	
-	@keyframes blink {
-		0%, 50% { opacity: 1; }
-		51%, 100% { opacity: 0; }
-	}
-	
-	/* Responsive */
+
 	@media (max-width: 600px) {
-		.title-glitch {
-			font-size: 1.6rem;
-		}
-		
-		.action-buttons {
-			flex-direction: column;
-		}
+		.action-grid { grid-template-columns: 1fr; }
+		.glass-content { padding: 1.5rem; }
 	}
 </style>
