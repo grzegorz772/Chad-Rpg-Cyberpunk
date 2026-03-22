@@ -633,13 +633,6 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 				<GameStartWindow on:emittedAnswer={handleMedievalGameStart} />
 			{:else}
 				<div class="game-content">
-					<div class="map-container">
-						<div class="map-header">
-							<span class="map-title">World Map</span>
-						</div>
-						<canvas id="gameMapCanvas"></canvas>
-						<div id="mapTileInfo" class="map-tile-info" style="display: none;"></div>
-					</div>
 					<div
 						class="story-section"
 						in:scale={{ duration: 600, start: 0.9, delay: 100, easing: backOut }}
