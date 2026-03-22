@@ -3,7 +3,7 @@
 </script>
 
 <!-- Background Images Layer -->
-<div class="bg-container">
+<div style="width: 0;" class="bg-container">
 	<!-- Default fallback background - always render, just behind -->
 	<div class="bg-fallback" />
 

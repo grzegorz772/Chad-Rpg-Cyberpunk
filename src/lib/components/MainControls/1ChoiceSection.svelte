@@ -5,21 +5,17 @@
 
 	import { createEventDispatcher } from 'svelte'
 	import { fade, fly, scale } from 'svelte/transition'
-	import { backOut } from 'svelte/easing'
+	import { backOut, cubicOut } from 'svelte/easing' // Added cubicOut for smoother fly
 
 	const dispatch = createEventDispatcher()
 
+	// Delay is still used, keep it
 	let delay: number = 0
-
-	function getDelayTime() {
-		delay += 80
-		return { delay }
-	}
 
 	function emitAnswer(answer: any) {
 		if (!answer) return
 		dispatch('emittedAnswer', { answer })
-		delay = 0
+		delay = 0 // Reset delay for next set of choices
 	}
 
 	function emitInteractiveAnswer(answer: any) {
@@ -36,12 +32,12 @@
 		$misc.interactivePoints -= 1
 
 		dispatch('emittedAnswer', { answer })
-		delay = 0
+		delay = 0 // Reset delay
 	}
 </script>
 
 <div
-	class="choices-panel choices-container"
+	class="choices-panel glass-container"
 	in:fade={{ duration: 400 }}
 	out:scale={{ duration: 300, start: 0.95 }}
 >
@@ -49,13 +45,12 @@
 	<div class="choices-list">
 		{#each $game.gameData.choices as choice, i}
 			<button
-				class="choice-btn"
+				class="choice-btn glass-button"
 				disabled={$misc.loading}
-				in:fly={{ y: 20, duration: 500, delay: i * 100, easing: backOut }}
+				in:fly={{ y: 20, duration: 500, delay: i * 100, easing: cubicOut }}
 				out:fly={{ x: -20, duration: 300, delay: i * 60 }}
 				on:click={() => emitAnswer(choice)}
 			>
-				<span class="choice-indicator">{i + 1}</span>
 				<span class="choice-text">{choice}</span>
 			</button>
 		{/each}
@@ -64,21 +59,22 @@
 	<!-- Custom Input -->
 	{#if $game.gameData.choices?.length >= 1}
 		<div
-			class="custom-input"
-			in:fly={{ y: 20, duration: 500, delay: $game.gameData.choices.length * 100, easing: backOut }}
+			class="custom-input glass-input-group"
+			in:fly={{ y: 20, duration: 500, delay: $game.gameData.choices.length * 100, easing: cubicOut }}
 			out:fade={{ duration: 300 }}
 		>
 			<div class="input-wrapper">
 				<input
 					type="text"
-					placeholder="Write your own action..."
+					placeholder="Enter custom action..."
 					bind:value={$misc.query}
 					on:keydown={(e) => e.key === 'Enter' && emitInteractiveAnswer($misc.query)}
+					class="glass-input-field"
 				/>
-				<span class="points-badge">{$misc.interactivePoints}</span>
+				<span class="points-badge glass-badge">{$misc.interactivePoints}</span>
 			</div>
 			<button
-				class="submit-btn"
+				class="submit-btn glass-submit-btn"
 				disabled={$misc.loading || !$misc.query}
 				on:click={() => emitInteractiveAnswer($misc.query)}
 			>
@@ -98,87 +94,120 @@
 </div>
 
 <style>
-	.choices-container {
+	/* Inherit root variables from parent components or define here if not */
+	:root {
+		--glass-bg: rgba(255, 255, 255, 0.03);
+		--glass-border: rgba(255, 255, 255, 0.1);
+		--accent-primary: #00f2ff;
+		--accent-secondary: #7000ff;
+		--text-main: #e0e0e0;
+		--text-dim: rgba(224, 224, 224, 0.5);
+		--success: #00ffaa;
+		--gold-color: #f5b042;
+
+		--space-xs: 0.25rem; /* 4px */
+		--space-sm: 0.5rem;  /* 8px */
+		--space-md: 1rem;    /* 16px */
+		--space-lg: 1.5rem;  /* 24px */
+
+		--radius-sm: 4px;
+		--radius-md: 8px;
+		--radius-lg: 16px;
+
+		--transition-fast: 0.2s ease-out;
+	}
+
+	.choices-panel {
+		background: none !important;
+		border: none !important;
+		padding: 0 !important;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-sm);
+		gap: var(--space-md);
 		width: 100%;
-		height: 100%;
-		padding: var(--space-md);
-		background: var(--color-bg-card);
-		backdrop-filter: blur(24px);
-		-webkit-backdrop-filter: blur(24px);
-		border: 1px solid var(--color-border);
+		padding: var(--space-lg);
+		background: rgba(10, 10, 15, 0.4); /* Darker glass background */
+		backdrop-filter: blur(40px);
+		-webkit-backdrop-filter: blur(40px);
+		border: 1px solid var(--glass-border);
 		border-radius: var(--radius-lg);
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+		transition: box-shadow var(--transition-fast);
 	}
 
 	.choices-list {
+		margin-bottom: 1rem;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-xs);
+		gap: var(--space-sm);
 	}
-	.choices-panel {
-		margin-top: 1rem;
-	}
+
 	.choice-btn {
 		display: flex;
 		align-items: center;
 		gap: var(--space-md);
 		width: 100%;
-		padding: var(--space-sm) var(--space-md);
-		background: var(--color-bg-glass);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		border: 1px solid var(--color-border);
+		padding: var(--space-md) var(--space-lg);
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
 		border-radius: var(--radius-md);
 		cursor: pointer;
 		transition: all var(--transition-fast);
 		text-align: left;
+		color: var(--text-main);
+		font-size: 1rem;
+		font-weight: 500;
+		line-height: 1.4;
 	}
 
 	.choice-btn:hover:not(:disabled) {
-		background: rgba(124, 92, 224, 0.15);
-		border-color: rgba(124, 92, 224, 0.4);
-		transform: translateX(4px);
+		background: rgba(0, 242, 255, 0.08); /* Accent hover */
+		border-color: var(--accent-primary);
+		transform: translateX(5px);
+		box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
 	}
 
 	.choice-btn:active:not(:disabled) {
 		transform: translateX(2px) scale(0.99);
+		background: rgba(0, 242, 255, 0.15);
 	}
 
 	.choice-btn:disabled {
-		opacity: 0.5;
+		opacity: 0.4;
 		cursor: not-allowed;
+		filter: grayscale(1);
 	}
 
 	.choice-indicator {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 28px;
-		height: 28px;
-		background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+		min-width: 32px; /* Fixed width */
+		height: 32px;
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
 		border-radius: var(--radius-sm);
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: white;
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: #1a1a1a; /* Dark text for contrast */
 		flex-shrink: 0;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 	}
 
 	.choice-text {
-		font-size: 0.9rem;
-		color: var(--color-text-primary);
-		line-height: 1.4;
+		padding: 1rem !important;
+		flex: 1; /* Allows text to grow */
+		color: var(--text-main);
 	}
 
-	/* Custom Input */
+	/* Custom Input Group */
 	.custom-input {
 		display: flex;
 		gap: var(--space-sm);
 		padding: var(--space-xs);
-		background: var(--color-bg-card);
-		border: 1px solid var(--color-border);
+		background: rgba(255, 255, 255, 0.05); /* Slightly lighter glass for input */
+		border: 1px solid var(--glass-border);
 		border-radius: var(--radius-lg);
+		box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 	}
 
 	.input-wrapper {
@@ -189,41 +218,42 @@
 		padding: 0 var(--space-sm);
 	}
 
-	.input-wrapper input {
+	.glass-input-field {
 		flex: 1;
 		background: transparent;
 		border: none;
 		outline: none;
-		font-size: 0.875rem;
-		color: var(--color-text-primary);
+		font-size: 1rem;
+		color: var(--text-main);
 		padding: var(--space-sm) 0;
 	}
 
-	.input-wrapper input::placeholder {
-		color: var(--color-text-muted);
+	.glass-input-field::placeholder {
+		color: var(--text-dim);
 	}
 
 	.points-badge {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 24px;
-		height: 24px;
+		min-width: 32px;
+		height: 32px;
 		padding: 0 var(--space-xs);
-		background: var(--color-accent-gold);
-		border-radius: 12px;
-		font-size: 0.7rem;
-		font-weight: 600;
-		color: #1a1a1a;
+		background: var(--gold-color);
+		border-radius: 16px; /* Pill shape */
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #2c1a0a; /* Dark text for gold */
+		flex-shrink: 0;
 	}
 
 	.submit-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 44px;
-		height: 44px;
-		background: linear-gradient(135deg, var(--color-accent-primary), #9b6eff);
+		width: 48px;
+		height: 48px;
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
 		border: none;
 		border-radius: var(--radius-md);
 		cursor: pointer;
@@ -233,7 +263,7 @@
 
 	.submit-btn:hover:not(:disabled) {
 		transform: scale(1.05);
-		box-shadow: 0 4px 20px rgba(124, 92, 224, 0.4);
+		box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
 	}
 
 	.submit-btn:active:not(:disabled) {
@@ -241,80 +271,94 @@
 	}
 
 	.submit-btn:disabled {
-		opacity: 0.4;
+		opacity: 0.3;
 		cursor: not-allowed;
 	}
 
 	.submit-btn svg {
 		color: white;
+		stroke-width: 2.5; /* Slightly thicker icon stroke */
 	}
 
-	/* Responsive */
+	/* Responsive Adjustments */
 	@media (max-width: 768px) {
-		.choice-btn {
-			padding: var(--space-sm);
+		.choices-panel {
+			padding: var(--space-md);
 			gap: var(--space-sm);
 		}
 
+		.choice-btn {
+			padding: var(--space-sm);
+			gap: var(--space-sm);
+			font-size: 0.9rem;
+		}
+
 		.choice-indicator {
-			width: 24px;
-			height: 24px;
+			min-width: 28px;
+			height: 28px;
+			font-size: 0.8rem;
+		}
+
+		.custom-input {
+			padding: var(--space-xs);
+		}
+
+		.glass-input-field {
+			font-size: 0.9rem;
+		}
+
+		.points-badge {
+			min-width: 28px;
+			height: 28px;
 			font-size: 0.7rem;
 		}
 
-		.choice-text {
-			font-size: 0.85rem;
-		}
-
 		.submit-btn {
-			width: 40px;
-			height: 40px;
+			width: 44px;
+			height: 44px;
 		}
 	}
 
 	@media (max-width: 480px) {
-		.choices-container {
+		.choices-panel {
 			padding: var(--space-sm);
+			gap: var(--space-xs);
 		}
 
 		.choice-btn {
-			padding: var(--space-xs) var(--space-sm);
-		}
-
-		.choice-indicator {
-			width: 22px;
-			height: 22px;
-			font-size: 0.65rem;
-		}
-
-		.choice-text {
+			padding: var(--space-xs);
+			gap: var(--space-xs);
 			font-size: 0.8rem;
 		}
 
-		/* Thinner custom input on mobile */
+		.choice-indicator {
+			min-width: 24px;
+			height: 24px;
+			font-size: 0.7rem;
+		}
+
 		.custom-input {
-			padding: 2px;
-			gap: 4px;
+			gap: var(--space-xs);
 		}
 
 		.input-wrapper {
 			padding: 0 var(--space-xs);
 		}
 
-		.input-wrapper input {
-			font-size: 0.75rem;
+		.glass-input-field {
+			font-size: 0.8rem;
 			padding: var(--space-xs) 0;
 		}
 
-		.submit-btn {
-			width: 34px;
-			height: 34px;
+		.points-badge {
+			min-width: 24px;
+			height: 24px;
+			font-size: 0.65rem;
 		}
 
-		.points-badge {
-			min-width: 20px;
-			height: 20px;
-			font-size: 0.65rem;
+		.submit-btn {
+			width: 38px;
+			height: 38px;
 		}
 	}
 </style>

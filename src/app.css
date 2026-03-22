@@ -64,6 +64,8 @@ html,
 body {
 	overflow: hidden;
 	background: transparent;
+	margin: 0;
+	max-width: 100%;
 }
 
 /* Scrollbar */

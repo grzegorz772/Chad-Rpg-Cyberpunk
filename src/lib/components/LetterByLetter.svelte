@@ -1,46 +1,30 @@
 <script lang="ts">
-	import { blur } from 'svelte/transition'
-
 	// Preferred prop name (used by `Game.svelte`).
 	export let text: string | string[] | null | undefined = undefined
 	// Backwards-compatible alias.
 	export let message: string | string[] | null | undefined = undefined
 
-	let isVisible = false
-	let tokens: string[] = []
-
 	$: {
-		const value = text ?? message
+		// Ensure 'text' always takes precedence if both are provided
+		const value = text ?? message;
 		if (Array.isArray(value)) {
-			tokens = value.map((v) => String(v))
+			text = value.join(' '); // Join array into a single string
 		} else if (typeof value === 'string') {
-			tokens = value.split(' ')
+			text = value; // Keep as is
 		} else {
-			tokens = []
+			text = ''; // Default to empty string
 		}
-		isVisible = true
 	}
 </script>
 
-{#if isVisible}
-	<p>
-		{#each tokens as letter, index}
-			<span transition:blur={{ duration: Math.min(index * 100, 2000) }}>
-				{letter + ' '}
-			</span>
-		{/each}
-	</p>
-{/if}
+<p>
+	{text}
+</p>
 
 <style>
+	/* Removed all custom styling, including the fadeIn animation,
+	   to ensure it renders as plain text. */
 	p {
-		opacity: 0;
-		animation: fadeIn 2s forwards;
-	}
-
-	@keyframes fadeIn {
-		to {
-			opacity: 1;
-		}
+		margin: 0; /* Ensure no default paragraph margins interfere with layout */
 	}
 </style>

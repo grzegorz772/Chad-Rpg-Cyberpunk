@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { fade, scale } from 'svelte/transition'
-	import { backOut } from 'svelte/easing'
+	import { fade, scale, fly } from 'svelte/transition'
+	import { backOut, cubicOut } from 'svelte/easing'
 
 	import LetterByLetter from './LetterByLetter.svelte'
 	import UiButtons from './UiButtons.svelte'
@@ -614,45 +614,56 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 	}
 </script>
 
-<div>
+<div class="game-interface-root">
 	<BackgroundImgs />
 
-<div class="debug-overlay">
-        <Modal /> 
-</div>
+	<div class="debug-overlay">
+		<Modal /> 
+	</div>
+
 	{#if $misc.maintenanceWindow}
 		<div class="maintenance-overlay">
-			<div class="maintenance-content">
-				<h2>Game Maintenance</h2>
-				<p>The game is currently under maintenance. Please check back later.</p>
+			<div class="glass-modal">
+				<h2>SYSTEM MAINTENANCE</h2>
+				<p>The interface is currently undergoing recalibration. Please stand by.</p>
 			</div>
 		</div>
 	{:else}
-		<div class="game-container">
+		<div style="padding: 0 !important;" class="game-container">
 			{#if !$misc.started}
 				<GameStartWindow on:emittedAnswer={handleMedievalGameStart} />
 			{:else}
-				<div class="game-content">
+				<div class="main-content-layer">
+					<!-- Story Section -->
 					<div
-						class="story-section"
-						in:scale={{ duration: 600, start: 0.9, delay: 100, easing: backOut }}
+						class="story-section glass-module"
+						in:scale={{ duration: 600, start: 0.95, delay: 100, easing: backOut }}
 					>
-						{#if $misc.loading}
-							<div class="loading-message">
-								<LetterByLetter text={dotty} />
-							</div>
-						{:else if $game.gameData.story}
-							<div class="story-text" transition:fade>
-								<LetterByLetter text={$game.gameData.story} />
-							</div>
-						{/if}
+						<div class="module-header">
+							<span class="location-tag">{$misc.place || 'INITIALIZING...'}</span>
+							<span class="time-tag">{$misc.time}</span>
+						</div>
+						
+						<div class="viewport">
+							{#if $misc.loading}
+								<div class="neural-loading">
+									<div class="spinner"></div>
+									<span>SYNCING NEURAL FEED{dotty}</span>
+								</div>
+							{:else if $game.gameData.story}
+								<div class="story-text" transition:fade>
+									<LetterByLetter text={$game.gameData.story} />
+								</div>
+							{/if}
+						</div>
 					</div>
+
+					<!-- Choices Section -->
 					<div class="choices-section">
 						{#if $game.gameData.choices && $game.gameData.choices.length > 0}
 							<div
-								in:scale={{ duration: 600, start: 0.9, delay: 100, easing: backOut }}
-								out:scale={{ duration: 300, start: 0.95, easing: backOut }}
-								style="width: 100%; height: 100%;"
+								in:fly={{ y: 20, duration: 600, delay: 200, easing: cubicOut }}
+								style="width: 100%;"
 							>
 								<Choices on:emittedAnswer={handleEmittedAnswer} />
 							</div>
@@ -666,63 +677,18 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		<MessageWindows />
 	{/if}
 
-	{#if quotaExceeded}
+	{#if quotaExceeded || highDemand || requestTimeout}
 		<div class="quota-overlay" transition:fade>
-			<div class="quota-content">
-				<div class="quota-icon">⚠️</div>
-				<h2>API Limit Reached</h2>
+			<div class="glass-modal error-state">
+				<div class="quota-icon">{quotaExceeded ? '⚠️' : requestTimeout ? '🤖' : '🚀'}</div>
+				<h2>{quotaExceeded ? 'QUOTA EXCEEDED' : requestTimeout ? 'TIMEOUT' : 'HIGH TRAFFIC'}</h2>
 				<p>
-					This game is for <strong>demonstration purposes only</strong> and uses a free API quota.
+					{quotaExceeded 
+						? 'The neural network has reached its processing limit. Please stand by.' 
+						: 'Connection to the central core is unstable. Retry sequence later.'}
 				</p>
-				<p class="quota-detail">
-					The AI chat service has temporarily reached its limit. Please try again later or check
-					back tomorrow.
-				</p>
-				<p class="quota-sorry">Sorry for the inconvenience!</p>
-				<button class="quota-dismiss" on:click={() => (quotaExceeded = false)}> Dismiss </button>
-			</div>
-		</div>
-	{/if}
-
-	{#if highDemand}
-		<div class="quota-overlay" transition:fade>
-			<div class="quota-content high-demand">
-				<div class="quota-icon">🚀</div>
-				<h2>High Traffic</h2>
-				<p>
-					The AI service is currently <strong>heavily overloaded</strong> or timed out.
-				</p>
-				<p class="quota-detail">
-					Google Gemini is taking too long to respond, and the server had to stop waiting. Please
-					try your action later again.
-				</p>
-				<p class="quota-sorry">Thank you for your patience!</p>
-				<button class="quota-dismiss" on:click={() => (highDemand = false)}> Dismiss </button>
-			</div>
-		</div>
-	{/if}
-
-	{#if requestTimeout}
-		<div class="quota-overlay" transition:fade>
-			<div class="quota-content timeout">
-				<div class="quota-icon">🤖</div>
-				<h2>Request Cancelled</h2>
-				<p>
-					The Gemini API is <strong>currently full</strong> and couldn't respond in time.
-				</p>
-				<p class="quota-detail">
-					To keep the game responsive, we've stopped the current request. Please try your action
-					later again.
-				</p>
-				<p class="quota-sorry">Thank you for your patience!</p>
-				<button
-					class="quota-dismiss"
-					on:click={() => {
-						requestTimeout = false
-						$misc.loading = false
-					}}
-				>
-					Sadge, later then
+				<button class="dismiss-btn" on:click={() => { quotaExceeded = false; highDemand = false; requestTimeout = false; $misc.loading = false; }}>
+					ACKNOWLEDGE
 				</button>
 			</div>
 		</div>
@@ -730,454 +696,376 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 </div>
 
 <style>
-	/* ============================================
-	DEBUG OVERLAY – mały przycisk, nie przeszkadza
-	============================================ */
+	:root {
+		--glass-bg: rgba(255, 255, 255, 0.03);
+		--glass-border: rgba(255, 255, 255, 0.1);
+		--accent-primary: #00f2ff;
+		--accent-secondary: #7000ff;
+		--text-main: #e0e0e0;
+		--text-dim: rgba(224, 224, 224, 0.5);
+	}
+
+	.game-interface-root {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
+		background: #050508;
+		font-family: 'Inter', system-ui, sans-serif;
+	}
+
 	.debug-overlay {
 		position: fixed;
-		top: 8px;
-		right: 8px;
-		z-index: 9999;
-		pointer-events: auto;
+		top: 1rem;
+		right: 1rem;
+		z-index: 1000;
 	}
 
-	/* ============================================
-	GLOBAL
-	============================================ */
-	* {
-		box-sizing: border-box;
-	}
-
-	/* ============================================
-	GŁÓWNY KONTENER – bez tła, jednolity kolor
-	============================================ */
 	.game-container {
-		min-height: 100vh;
-		min-height: 100dvh;
-		background: #0a0c12; /* ciemne, neutralne tło */
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-		overflow-x: hidden;
-		position: relative;
-	}
-
-	/* ============================================
-	ZAWARTOŚĆ GRY
-	============================================ */
-	.game-content {
-		display: flex;
-		flex-direction: column;
 		flex: 1;
-		padding: 12px;
-		padding-bottom: 200px; /* miejsce na boxy akcji */
+		display: flex;
+		flex-direction: column;
 		width: 100%;
-		max-width: 800px;
+		max-width: 1000px;
 		margin: 0 auto;
-		gap: 12px;
+		padding: 2rem;
+		position: relative;
+		z-index: 10;
 	}
 
-	/* ============================================
-	SEKCJA OPOWIEŚCI – przewijana, bez licznika
-	============================================ */
+	.main-content-layer {
+		width: 95% !important;
+		padding-top: 3rem;
+		margin-left: auto;
+		margin-right: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		width: 100%;
+		padding-bottom: 120px;
+	}
+
+	/* Glass Module Style */
+	.glass-module {
+		background: rgba(10, 10, 15, 0.4);
+		backdrop-filter: blur(40px);
+		-webkit-backdrop-filter: blur(40px);
+		border: 1px solid var(--glass-border);
+		border-radius: 24px;
+		box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
 	.story-section {
-		position: relative;
+		min-height: 200px;
+		max-height: 55vh;
+	}
+
+	.module-header {
+		padding: 1rem 1.5rem;
+		border-bottom: 1px solid var(--glass-border);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background: rgba(255, 255, 255, 0.02);
+	}
+
+	.location-tag {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--accent-primary);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.time-tag {
+		font-size: 0.75rem;
+		font-family: monospace;
+		color: var(--text-dim);
+	}
+
+	.viewport {
+		flex: 1;
+		padding: 1.5rem;
 		overflow-y: auto;
-		padding: 16px;
-		border-radius: 16px;
-		background: rgba(20, 22, 32, 0.85);
-		backdrop-filter: blur(12px);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		min-height: 160px;
-		max-height: 35vh;
+		scrollbar-width: thin;
+		scrollbar-color: var(--glass-border) transparent;
 	}
 
 	.story-text {
-		line-height: 1.5;
-		font-size: 14px;
-		color: #eee;
-		word-wrap: break-word;
-		white-space: normal;
+		font-size: 1.05rem;
+		line-height: 1.7;
+		color: var(--text-main);
 	}
 
-	/* Ukrywamy kropki ładowania (licznik) – to ten "dotty" */
-	.loading-message {
-		display: none;
+	/* Loading State */
+	.neural-loading {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		min-height: 150px;
+		gap: 1.5rem;
+		color: var(--accent-primary);
+		font-weight: 700;
+		font-size: 0.8rem;
+		letter-spacing: 0.15em;
 	}
 
-	/* ============================================
-	PRZYCISKI WYBORÓW – DUŻE I WYRAŹNE
-	============================================ */
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid rgba(0, 242, 255, 0.1);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin { to { transform: rotate(360deg); } }
+
+	/* Choices */
 	.choices-section {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
-		width: 100%;
-		margin: 4px 0;
-	}
-
-	.choices-section :global(.choice-btn),
-	.choices-section :global(button) {
-		width: 100%;
-		padding: 14px 16px;
-		background: rgba(30, 35, 50, 0.95);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 14px;
-		color: #f0f0f0;
-		font-size: 15px;
-		font-weight: 500;
-		text-align: left;
-		cursor: pointer;
-		transition: all 0.2s;
-		backdrop-filter: blur(4px);
-	}
-
-	.choices-section :global(button:active) {
-		background: rgba(70, 80, 110, 0.95);
-		transform: scale(0.98);
-	}
-
-	/* ============================================
-	PRZYCISKI UI (np. otwórz ekwipunek) – opcjonalnie
-	============================================ */
-	.ui-section {
-		margin: 8px 0;
+		gap: 1rem;
 		width: 100%;
 	}
 
-	.ui-section :global(button) {
-		padding: 10px 18px;
-		background: rgba(40, 45, 60, 0.9);
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 30px;
-		color: white;
-		font-size: 13px;
-		font-weight: 500;
-		cursor: pointer;
-		margin-right: 8px;
-		margin-bottom: 8px;
-	}
-
-	/* ============================================
-	BOX Z MONETAMI – ŁADNY, PRZYJEMNY
-	============================================ */
-	/* Jeśli masz gdzieś wyświetlanie monet, np. w UiButtons, dodaj te style */
-	.coins-display,
-	[class*="gold"],
-	[class*="coin"] {
-		background: linear-gradient(135deg, #f5b042, #e08e1a);
-		color: #2c1a0a;
-		font-weight: bold;
-		padding: 6px 12px;
-		border-radius: 40px;
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 14px;
-		box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-	}
-
-	/* ============================================
-	ACTION BOXES (EKWIPUNEK, ZAKLĘCIA, LOOT) – WIDOCZNE NA TELEFONIE
-	============================================ */
-	.action-boxes {
-		position: fixed;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: stretch;
-		gap: 8px;
-		padding: 10px 12px;
-		background: rgba(0, 0, 0, 0.92);
-		backdrop-filter: blur(16px);
-		border-top: 1px solid rgba(255, 255, 255, 0.15);
-		z-index: 200;
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	/* Każdy box – Inventory, Spells, Loot */
-	.action-boxes :global(.action-box) {
-		flex: 1;
-		min-width: 110px;
-		background: rgba(25, 28, 38, 0.95);
-		border-radius: 16px;
-		padding: 10px 8px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		display: flex;
-		flex-direction: column;
-		max-height: 170px;
-		overflow-y: auto;
-	}
-
-	.action-boxes :global(.action-box-title) {
-		font-size: 13px;
-		font-weight: bold;
-		margin-bottom: 8px;
-		color: #ddd;
-		text-align: center;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-	}
-
-	.action-boxes :global(button) {
-		width: 100%;
-		padding: 8px 6px;
-		margin: 3px 0;
-		background: rgba(60, 65, 90, 0.9);
-		border: none;
-		border-radius: 10px;
-		color: white;
-		font-size: 11px;
-		cursor: pointer;
-		text-align: left;
-		word-break: break-word;
-		transition: 0.1s;
-	}
-
-	.action-boxes :global(button:active) {
-		background: rgba(100, 110, 150, 0.9);
-	}
-
-	/* ============================================
-	OVERLAY – BŁĘDY API (QUOTA)
-	============================================ */
+	/* Overlays & Modals */
 	.maintenance-overlay,
 	.quota-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.95);
+		background: rgba(0, 0, 0, 0.85);
+		backdrop-filter: blur(10px);
+		z-index: 2000;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 2000;
-		padding: 20px;
+		padding: 2rem;
 	}
 
-	.maintenance-content,
-	.quota-content {
-		background: rgba(20, 22, 35, 0.98);
-		backdrop-filter: blur(16px);
-		padding: 24px;
-		border-radius: 28px;
+	.glass-modal {
+		background: rgba(20, 22, 35, 0.8);
+		backdrop-filter: blur(30px);
+		border: 1px solid var(--glass-border);
+		border-radius: 32px;
+		padding: 3rem;
+		max-width: 450px;
+		width: 100%;
 		text-align: center;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		max-width: 90%;
-		width: 320px;
+		box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
 	}
 
-	.quota-icon {
-		font-size: 2.5rem;
-		margin-bottom: 16px;
-	}
-
-	.quota-content h2 {
-		font-size: 1.3rem;
-		margin-bottom: 12px;
-		color: #ffaa44;
-	}
-
-	.quota-content p {
-		font-size: 0.9rem;
-		line-height: 1.5;
-		color: #ddd;
-	}
-
-	.quota-dismiss {
-		margin-top: 20px;
-		padding: 10px 24px;
-		background: linear-gradient(135deg, #5a67d8, #7f5af0);
-		border: none;
-		border-radius: 40px;
+	.glass-modal h2 {
+		font-size: 1.5rem;
+		font-weight: 800;
 		color: white;
-		font-weight: 600;
+		margin-bottom: 1rem;
+		letter-spacing: 0.05em;
+	}
+
+	.glass-modal p {
+		color: var(--text-dim);
+		line-height: 1.6;
+		font-size: 0.95rem;
+	}
+
+	.dismiss-btn {
+		margin-top: 2rem;
+		background: var(--accent-primary);
+		color: black;
+		border: none;
+		padding: 1rem 2rem;
+		border-radius: 16px;
+		font-weight: 800;
 		cursor: pointer;
 		width: 100%;
+		transition: all 0.3s;
 	}
 
-	/* ============================================
-	RESPONSYWNOSĆ – TABLET I WIĘKSZE
-	============================================ */
-	@media (min-width: 768px) {
-		.game-content {
-			padding: 20px;
-			padding-bottom: 180px;
-			gap: 20px;
-		}
-
-		.story-section {
-			padding: 24px;
-		}
-
-		.story-text {
-			font-size: 16px;
-		}
-
-		.choices-section :global(button) {
-			padding: 16px 20px;
-			font-size: 16px;
-		}
-
-		.action-boxes {
-			padding: 12px 20px;
-			gap: 12px;
-		}
-
-		.action-boxes :global(.action-box) {
-			min-width: 150px;
-			padding: 12px;
-		}
+	.dismiss-btn:hover {
+		transform: scale(1.02);
+		filter: brightness(1.1);
 	}
 
-	@media (min-width: 1024px) {
-		.action-boxes {
-			max-width: 900px;
-			left: 50%;
-			right: auto;
-			transform: translateX(-50%);
-			border-radius: 20px 20px 0 0;
-		}
+	/* Responsive */
+	@media (max-width: 768px) {
+		.game-container { padding: 1rem; }
+		.main-content-layer { gap: 1.5rem; padding-bottom: 140px; }
+		.story-section { min-height: 180px; }
+		.module-header { padding: 0.8rem 1.2rem; }
+		.viewport { padding: 1.2rem; }
+		.story-text { font-size: 0.95rem; }
+		.glass-modal { padding: 2rem; }
 	}
 
-	/* ============================================
-	TELEFONY (max-width: 480px)
-	============================================ */
 	@media (max-width: 480px) {
-		.game-content {
-			padding: 8px;
-			padding-bottom: 180px;
-		}
-
-		.story-section {
-			padding: 12px;
-			min-height: 140px;
-		}
-
-		.story-text {
-			font-size: 13px;
-		}
-
-		.choices-section :global(button) {
-			padding: 12px 14px;
-			font-size: 14px;
-		}
-
-		.action-boxes {
-			padding: 8px 10px;
-			gap: 6px;
-		}
-
-		.action-boxes :global(.action-box) {
-			min-width: 100px;
-			max-height: 150px;
-		}
-
-		.action-boxes :global(.action-box-title) {
-			font-size: 11px;
-		}
-
-		.action-boxes :global(button) {
-			font-size: 10px;
-			padding: 6px 4px;
-		}
+		.main-content-layer { padding-bottom: 160px; }
+		.glass-module { border-radius: 16px; }
 	}
 
-	/* ============================================
-	POZIOME USTAWIENIE (LANDSCAPE)
-	============================================ */
-	@media (max-height: 600px) and (orientation: landscape) {
-		.game-content {
-			padding-bottom: 110px;
-		}
+:root {
+        /* Paleta Liquid Glass */
+        --glass-bg: rgba(15, 15, 25, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --accent-primary: #00f2ff;
+        --accent-secondary: #7000ff;
+        --accent-glow: rgba(0, 242, 255, 0.3);
+        --text-main: #f8f9fa;
+        --text-dim: rgba(248, 249, 250, 0.5);
+        --surface-deep: #050508;
+    }
 
-		.story-section {
-			max-height: 30vh;
-			min-height: 100px;
-		}
+    .game-interface-root {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface-deep);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--text-main);
+        overflow-x: hidden;
+    }
 
-		.action-boxes {
-			padding: 5px 8px;
-		}
+    /* Dynamiczny efekt płynnego tła */
+    .game-interface-root::before {
+        content: "";
+        position: fixed;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: radial-gradient(circle at center, var(--accent-secondary) 0%, transparent 25%),
+                    radial-gradient(circle at 20% 30%, #1a1a2e 0%, transparent 40%),
+                    radial-gradient(circle at 80% 70%, #0a0a15 0%, transparent 40%);
+        opacity: 0.15;
+        filter: blur(80px);
+        animation: liquid-drift 20s infinite alternate;
+        z-index: 1;
+    }
 
-		.action-boxes :global(.action-box) {
-			min-width: 90px;
-			max-height: 100px;
-		}
-	}
+    @keyframes liquid-drift {
+        from { transform: rotate(0deg) scale(1); }
+        to { transform: rotate(5deg) scale(1.1); }
+    }
 
-	/* ============================================
-	PRZEWIJANIE BOXÓW I SEKCJI
-	============================================ */
-	.story-section::-webkit-scrollbar,
-	.action-boxes :global(.action-box)::-webkit-scrollbar {
-		width: 3px;
-		height: 3px;
-	}
+    .game-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem;
+        position: relative;
+        z-index: 10;
+    }
 
-	.story-section::-webkit-scrollbar-track,
-	.action-boxes :global(.action-box)::-webkit-scrollbar-track {
-		background: rgba(255, 255, 255, 0.05);
-	}
+    .main-content-layer {
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+        width: 100%;
+    }
 
-	.story-section::-webkit-scrollbar-thumb,
-	.action-boxes :global(.action-box)::-webkit-scrollbar-thumb {
-		background: rgba(255, 255, 255, 0.3);
-		border-radius: 3px;
-	}
-/* ============================================
-   MAPA ŚWIATA
-   ============================================ */
-.map-container {
-	margin-top: 20px;
-	padding: 12px;
-	background: rgba(0, 0, 0, 0.6);
-	border-radius: 12px;
-	border: 1px solid rgba(255, 170, 68, 0.3);
-}
+    /* Zaawansowany efekt szklanego panelu */
+    .glass-module {
+        background: var(--glass-bg);
+        backdrop-filter: blur(25px) saturate(180%);
+        -webkit-backdrop-filter: blur(25px) saturate(180%);
+        border: 1px solid var(--glass-border);
+        border-radius: 32px;
+        box-shadow: 
+            0 10px 30px rgba(0, 0, 0, 0.4),
+            inset 0 0 20px rgba(255, 255, 255, 0.02);
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s;
+    }
 
-.map-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 10px;
-	padding-bottom: 5px;
-	border-bottom: 1px solid rgba(255, 170, 68, 0.3);
-}
+    .glass-module:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+    }
 
-.map-title {
-	font-size: 12px;
-	font-weight: bold;
-	color: #ffaa44;
-	letter-spacing: 1px;
-	text-transform: uppercase;
-}
+    .story-section {
+        min-height: 280px;
+        position: relative;
+    }
 
-.map-refresh-btn {
-	background: transparent;
-	border: 1px solid #ffaa44;
-	color: #ffaa44;
-	padding: 4px 8px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 12px;
-	transition: all 0.2s;
-}
+    .module-header {
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.03);
+    }
 
-.map-refresh-btn:hover {
-	background: #ffaa44;
-	color: #000;
-}
+    .location-tag {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--accent-primary);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        text-shadow: 0 0 15px var(--accent-glow);
+    }
 
-.map-tile-info {
-	margin-top: 10px;
-	padding: 8px;
-	background: rgba(0, 0, 0, 0.7);
-	border-radius: 8px;
-	font-size: 11px;
-	color: #ddd;
-	border-left: 3px solid #ffaa44;
-}
+    .time-tag {
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-dim);
+        background: rgba(0, 0, 0, 0.3);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+    }
+
+    .viewport {
+        padding: 2rem;
+        line-height: 1.8;
+    }
+
+    .story-text {
+        font-size: 1.1rem;
+        color: var(--text-main);
+        letter-spacing: -0.01em;
+    }
+
+    /* Przycisk Acknowledge i inne interakcje */
+    .dismiss-btn {
+        background: linear-gradient(135deg, var(--accent-primary), #00c2ff);
+        color: #000;
+        border-radius: 20px;
+        padding: 1.2rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 8px 20px var(--accent-glow);
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .dismiss-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 25px var(--accent-glow);
+        filter: brightness(1.1);
+    }
+
+    /* Styl paska przewijania (Scrollbar) */
+    .viewport::-webkit-scrollbar { width: 6px; }
+    .viewport::-webkit-scrollbar-track { background: transparent; }
+    .viewport::-webkit-scrollbar-thumb {
+        background: var(--glass-border);
+        border-radius: 10px;
+    }
+
+    /* Mobile Adaptability */
+    @media (max-width: 768px) {
+        .game-container { padding: 1.5rem 1rem; }
+        .glass-module { border-radius: 24px; }
+        .story-text { font-size: 1rem; }
+    }
+
 </style>
