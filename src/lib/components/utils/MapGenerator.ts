@@ -87,15 +87,126 @@ const regionTemplates = {
 }
 
 // ============================================
-// KOLORY DLA TYPÓW TERENU (STONOWANE)
+// KOLORY DLA TYPÓW TERENU (Domyślne - zostaną nadpisane przez AI)
 // ============================================
-const regionColors: Record<string, string[]> = {
-	"city": ["#9e7b5c", "#ad8b68", "#bc9b74", "#cbab80", "#dabb8c", "#e9cb98"],
-	"plains": ["#8aad6e", "#9bbd7e", "#accd8e", "#bdde9e", "#ceeeae", "#dfffbe"],
-	"water": ["#6d8faa", "#80a0b8", "#93b1c6", "#a6c2d4", "#b9d3e2", "#cce4f0"],
-	"desert": ["#c6b28b", "#d2c09c", "#deceae", "#eadcc0", "#f6ead2", "#fff8e4"],
-	"forest": ["#5f7a4b", "#708b5c", "#819c6d", "#92ad7e", "#a3be8f", "#b4cfa0"],
-	"mountain": ["#8f8b87", "#a19d99", "#b3afab", "#c5c1bd", "#d7d3cf", "#e9e5e1"]
+let regionColors: Record<string, string[]> = {
+	"city": ["#cccccc", "#bbbbbb", "#aaaaaa", "#999999", "#888888"],
+	"plains": ["#e0e0e0", "#d0d0d0", "#c0c0c0", "#b0b0b0", "#a0a0a0"],
+	"water": ["#d1d1d1", "#c1c1c1", "#b1b1b1", "#a1a1a1", "#919191"],
+	"desert": ["#dadada", "#cacaca", "#bababa", "#aaaaaa", "#9a9a9a"],
+	"forest": ["#cdcdcd", "#bdbdbd", "#adadad", "#9d9d9d", "#8d8d8d"],
+	"mountain": ["#d5d5d5", "#c5c5c5", "#b5b5b5", "#a5a5a5", "#959595"]
+}
+
+let regionNames: Record<string, string> = {
+	"city": "CITY",
+	"plains": "MAIN NEUTRAL",
+	"water": "DIVIDER",
+	"desert": "SECOND NEUTRAL",
+	"forest": "THIRD NEUTRAL",
+	"mountain": "FOURTH NEUTRAL"
+}
+
+// Funkcja generująca 5 odcieni z koloru bazowego
+function generateShades(baseColor: string): string[] {
+	// Prosta funkcja do zmiany jasności HEX
+	const adjust = (color: string, percent: number) => {
+		const num = parseInt(color.replace("#", ""), 16);
+		const amt = Math.round(2.55 * percent);
+		const R = (num >> 16) + amt;
+		const G = (num >> 8 & 0x00FF) + amt;
+		const B = (num & 0x0000FF) + amt;
+		return "#" + (0x1000000 + (R < 255 ? R < 0 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 0 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 0 ? 0 : B : 255)).toString(16).slice(1);
+	};
+
+	return [
+		adjust(baseColor, 30),  // 30% jaśniejszy
+		adjust(baseColor, 15),  // 15% jaśniejszy
+		baseColor,              // Bazowy (środek)
+		adjust(baseColor, -15), // 15% ciemniejszy
+		adjust(baseColor, -30)  // 30% ciemniejszy
+	];
+}
+
+// Funkcja do pobrania motywu świata od AI
+export async function enhanceWorldTheme(worldDescription: string): Promise<boolean> {
+	console.log('🎨 Enhancing world theme based on description:', worldDescription);
+	
+	const prompt = `
+    Based on this world description: "${worldDescription}", create a visual theme and names for the regions.
+    You must provide a base HEX color and a theme-appropriate name for each type:
+    - CITY: (The main settlements)
+    - MAIN_NEUTRAL: (The most common plains/open areas)
+    - DIVIDER: (Water bodies like rivers or lakes)
+    - SECOND_NEUTRAL: (Desert or dry areas)
+    - THIRD_NEUTRAL: (Forests or overgrown areas)
+    - FOURTH_NEUTRAL: (Mountains or high peaks)
+
+    Respond with ONLY a JSON object in this format:
+    {
+      "theme": {
+        "city": { "name": "...", "color": "#HEX" },
+        "plains": { "name": "...", "color": "#HEX" },
+        "water": { "name": "...", "color": "#HEX" },
+        "desert": { "name": "...", "color": "#HEX" },
+        "forest": { "name": "...", "color": "#HEX" },
+        "mountain": { "name": "...", "color": "#HEX" }
+      }
+    }
+    `;
+
+	try {
+		const response = await fetch('/api/enhance-regions', { 
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ prompt, type: 'theme_enhancement' })
+		});
+
+		if (!response.ok) throw new Error('Theme enhancement failed');
+		const data = await response.json();
+		
+		// Expected data.regionData (if using the generic endpoint) or data directly
+		const theme = data.theme || data.regionData?.theme;
+		if (!theme) {
+			console.error('Invalid theme data received:', data);
+			return false;
+		}
+
+		// Aktualizacja kolorów i nazw
+		for (const [key, value] of Object.entries(theme) as [string, any][]) {
+			if (regionColors[key]) {
+				regionColors[key] = generateShades(value.color);
+				regionNames[key] = value.name;
+			}
+		}
+
+		console.log('✨ World theme updated successfully:', regionNames);
+		
+		// Aktualizuj mapGrid z nowymi kolorami i nazwami
+		if (mapGrid.length > 0) {
+			for (let y = 0; y < MAP_SIZE; y++) {
+				for (let x = 0; x < MAP_SIZE; x++) {
+					const tile = mapGrid[y][x];
+					const type = tile.type; // city, plains, etc.
+					const colors = regionColors[type];
+					const seed = currentSeed || 1337;
+					const colorIdx = Math.floor(Math.abs(Math.sin(x * 7 + y * 13 + seed) * 100) % colors.length);
+					
+					tile.color = colors[colorIdx];
+					// We don't overwrite specific AI names, but we update the base type name if it's generic
+					if (tile.name.includes('Reach') || tile.name.includes('Lake') || tile.name.includes('Woods')) {
+						// Optional: keep specific names or refresh them. User said "ma zwrocic pare nazwe regiony i kolor"
+					}
+				}
+			}
+			updateGlobalWorldJSON();
+		}
+		
+		return true;
+	} catch (error) {
+		console.error('❌ Theme enhancement failed:', error);
+		return false;
+	}
 }
 
 // ============================================
@@ -259,9 +370,11 @@ export function generateMap(): any[] {
 	mapGrid = raw.map((row, y) => row.map((id, x) => {
 		const regionIdKey = `${x.toString().padStart(2, '0')}${y.toString().padStart(2, '0')}`;
 		const template = JSON.parse(JSON.stringify(regionTemplates[id as keyof typeof regionTemplates]));
+		
+		// Użyj dynamicznej nazwy typu
+		const typeBaseName = regionNames[template.type] || template.type;
 		const nameIdx = (x * 7 + y * 13 + seed) % locationNames.length;
-		const typeName = template.type === "city" ? "City" : template.type === "mountain" ? "Peak" : template.type === "water" ? "Lake" : template.type === "forest" ? "Woods" : "Reach";
-		const regionName = `${locationNames[nameIdx]} ${typeName}`;
+		const regionName = `${locationNames[nameIdx]} ${typeBaseName}`;
 		
 		let description = "";
 		if (template.type === "city") {
@@ -278,6 +391,7 @@ export function generateMap(): any[] {
 			description = `The rolling plains of ${regionName} stretch to the horizon.`;
 		}
 		
+		// Użyj dynamicznych kolorów (odcieni)
 		const colors = regionColors[template.type] || ["#888888"];
 		const colorIdx = Math.floor(Math.abs(Math.sin(x * 7 + y * 13 + seed) * 100) % colors.length);
 		
@@ -285,8 +399,8 @@ export function generateMap(): any[] {
 			...template,
 			id: regionIdKey,
 			x, y,
-			name: template.name === "LLM" ? regionName : template.name,
-			description: template.description === "LLM" ? description : template.description,
+			name: template.name === "LLM Generate" ? regionName : template.name,
+			description: template.description === "LLM Generate Max 3 sentences" ? description : template.description,
 			color: colors[colorIdx]
 		};
 		

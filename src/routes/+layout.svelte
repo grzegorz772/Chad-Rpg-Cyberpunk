@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	import { initDeviceDetection } from '$lib/stores/device'
 	import { onMount } from 'svelte'
 

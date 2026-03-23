@@ -35,125 +35,15 @@ import {
 	getRegionsInRadius,
 	enhanceRegionsWithAI,
 	updateWorldWithEnhancedRegions,
-	generateAllRegionsWithAI
+	generateAllRegionsWithAI,
+	enhanceWorldTheme
 } from '$lib/components/utils/MapGenerator';
 
 	// Import z pliku .ts (nie .svelte!)
 	let mapGenerated = false;
 	let mapGrid: any[] = [];
-	let selectedTile: any = null;
 	let generatingWorld = false;
 
-	// Funkcje do obsługi canvas (muszą zostać)
-	function renderMapCanvas() {
-		const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
-		if (!canvas) {
-			console.warn('Canvas element not found');
-			return;
-		}
-		
-		const ctx = canvas.getContext('2d');
-		if (!ctx) {
-			console.warn('Could not get canvas context');
-			return;
-		}
-		
-		if (!mapGrid || !mapGrid.length) {
-			console.warn('Map grid not ready');
-			return;
-		}
-		
-		canvas.width = MAP_SIZE * 10;
-		canvas.height = MAP_SIZE * 10;
-		canvas.style.width = `${MAP_SIZE * 10}px`;
-		canvas.style.height = `${MAP_SIZE * 10}px`;
-		
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		
-		// Draw each tile
-		for (let y = 0; y < mapGrid.length; y++) {
-			const row = mapGrid[y];
-			if (!row) continue;
-			
-			for (let x = 0; x < row.length; x++) {
-				const tile = row[x];
-				if (!tile) continue;
-				
-				ctx.fillStyle = tile.color || '#888888';
-				ctx.fillRect(x * 10, y * 10, 10, 10);
-				
-				// Draw borders between different region types
-				if (y > 0 && mapGrid[y-1] && mapGrid[y-1][x] && mapGrid[y-1][x].regionId !== tile.regionId) {
-					ctx.fillStyle = "rgba(0,0,0,0.2)";
-					ctx.fillRect(x * 10, y * 10, 10, 1);
-				}
-				if (x > 0 && mapGrid[y][x-1] && mapGrid[y][x-1].regionId !== tile.regionId) {
-					ctx.fillStyle = "rgba(0,0,0,0.2)";
-					ctx.fillRect(x * 10, y * 10, 1, 10);
-				}
-			}
-		}
-		
-		// Draw selected tile highlight
-		if (selectedTile && mapGrid[selectedTile.y] && mapGrid[selectedTile.y][selectedTile.x]) {
-			ctx.strokeStyle = "#ffaa44";
-			ctx.lineWidth = 2;
-			ctx.strokeRect(selectedTile.x * 10 + 1, selectedTile.y * 10 + 1, 8, 8);
-		}
-		
-		console.log('Map rendered successfully');
-	}
-
-	function handleMapClick(e: MouseEvent) {
-		const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
-		if (!canvas) return;
-		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width;
-		const scaleY = canvas.height / rect.height;
-		const mouseX = (e.clientX - rect.left) * scaleX;
-		const mouseY = (e.clientY - rect.top) * scaleY;
-		const x = Math.floor(mouseX / 10);
-		const y = Math.floor(mouseY / 10);
-		if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return;
-		selectedTile = {x, y};
-		renderMapCanvas();
-		
-		const tile = mapGrid[y][x];
-		const infoDiv = document.getElementById('mapTileInfo');
-		if (infoDiv) {
-			infoDiv.style.display = 'block';
-			infoDiv.innerHTML = `
-				<strong>📍 ${tile.name}</strong><br>
-				Type: ${tile.type}<br>
-				${tile.description}<br>
-				<small>[${x}, ${y}]</small>
-			`;
-		}
-	}
-
-	// W onMount:
-// W Game.svelte, w sekcji onMount
-onMount(() => {
-	// Wygeneruj mapę
-	mapGrid = generateMap();
-	
-	// Upewnij się, że canvas istnieje i ma odpowiedni ID
-	const canvas = document.getElementById('gameMapCanvas') as HTMLCanvasElement;
-	if (canvas) {
-		console.log('Canvas found, rendering map...');
-		canvas.addEventListener('click', handleMapClick);
-		// Wywołaj renderowanie po krótkim opóźnieniu, aby upewnić się, że DOM jest gotowy
-		setTimeout(() => {
-			renderMapCanvas();
-		}, 50);
-	} else {
-		console.error('Canvas with id "gameMapCanvas" not found!');
-	}
-	
-	return () => {
-		if (canvas) canvas.removeEventListener('click', handleMapClick);
-	};
-});
 // Eksport dla +page.svelte
 export function getMapGridFromGame() {
 	return mapGrid;
@@ -561,45 +451,30 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		if (!mapGenerated) {
 			generatingWorld = true;
 			
-			// Wygeneruj mapę proceduralnie
+			// Wygeneruj mapę proceduralnie (najpierw szara)
 			mapGrid = generateMap();
-			console.log('✅ Map generated with', mapGrid.length, 'rows');
-			
-			// Sprawdź czy canvas istnieje i wyrenderuj mapę
-			setTimeout(() => {
-				const canvas = document.getElementById('gameMapCanvas');
-				if (canvas) {
-					console.log('Canvas found, rendering map');
-					renderMapCanvas();
-				} else {
-					console.warn('Canvas not found for initial render');
+			console.log('✅ Base map generated');
+
+			// 1. Najpierw pobierz motyw wizualny (kolory i nazwy typów)
+			enhanceWorldTheme(answer).then(success => {
+				if (success) {
+					console.log('🎨 Visual theme applied!');
 				}
-			}, 100);
+			});
 			
-			// Uruchom generowanie regionów w tle (nie blokuje gry)
+			// 2. Uruchom generowanie konkretnych regionów w tle
 			generateAllRegionsWithAI()
 				.then(() => {
 					console.log('✨ All regions enhanced by AI!');
 					generatingWorld = false;
-					// Odśwież mapę po zakończeniu
-					setTimeout(() => {
-						renderMapCanvas();
-						$ui.successMsg = "World fully generated!";
-						setTimeout(() => $ui.successMsg = "", 3000);
-					}, 100);
+					$ui.successMsg = "World fully generated!";
+					setTimeout(() => $ui.successMsg = "", 3000);
 				})
 				.catch(err => {
 					console.error('Background generation failed:', err);
 					generatingWorld = false;
-					$ui.errorWarnMsg = "Some regions may have placeholder names";
-					setTimeout(() => {
-						if ($ui.errorWarnMsg === "Some regions may have placeholder names") {
-							$ui.errorWarnMsg = "";
-						}
-					}, 5000);
 				});
 			
-			console.log('🌍 World ready (AI generating in background)!');
 			mapGenerated = true;
 		}
 		
@@ -625,9 +500,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 <div class="game-interface-root">
 	<BackgroundImgs />
 
-	<div class="debug-overlay">
-		 
-	</div>
+	<div class="debug-overlay"></div>
 
 	{#if $misc.maintenanceWindow}
 		<div class="maintenance-overlay">
@@ -930,168 +803,4 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		.story-text { font-size: 0.95rem; }
 		.glass-modal { padding: 2rem; }
 	}
-
-	@media (max-width: 480px) {
-		.main-content-layer { padding-bottom: 160px; }
-		.glass-module { border-radius: 16px; }
-	}
-
-:root {
-        /* Paleta Liquid Glass */
-        --glass-bg: rgba(15, 15, 25, 0.6);
-        --glass-border: rgba(255, 255, 255, 0.08);
-        --accent-primary: #00f2ff;
-        --accent-secondary: #7000ff;
-        --accent-glow: rgba(0, 242, 255, 0.3);
-        --text-main: #f8f9fa;
-        --text-dim: rgba(248, 249, 250, 0.5);
-        --surface-deep: #050508;
-    }
-
-    .game-interface-root {
-        position: relative;
-        width: 100%;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        background: var(--surface-deep);
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        color: var(--text-main);
-        overflow-x: hidden;
-    }
-
-    /* Dynamiczny efekt płynnego tła */
-    .game-interface-root::before {
-        content: "";
-        position: fixed;
-        top: -50%; left: -50%; width: 200%; height: 200%;
-        background: radial-gradient(circle at center, var(--accent-secondary) 0%, transparent 25%),
-                    radial-gradient(circle at 20% 30%, #1a1a2e 0%, transparent 40%),
-                    radial-gradient(circle at 80% 70%, #0a0a15 0%, transparent 40%);
-        opacity: 0.15;
-        filter: blur(80px);
-        animation: liquid-drift 20s infinite alternate;
-        z-index: 1;
-    }
-
-    @keyframes liquid-drift {
-        from { transform: rotate(0deg) scale(1); }
-        to { transform: rotate(5deg) scale(1.1); }
-    }
-
-    .game-container {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 2.5rem 1.5rem;
-        position: relative;
-        z-index: 10;
-    }
-
-    .main-content-layer {
-        display: flex;
-        flex-direction: column;
-        gap: 2.5rem;
-        width: 100%;
-    }
-
-    /* Zaawansowany efekt szklanego panelu */
-    .glass-module {
-        background: var(--glass-bg);
-        backdrop-filter: blur(25px) saturate(180%);
-        -webkit-backdrop-filter: blur(25px) saturate(180%);
-        border: 1px solid var(--glass-border);
-        border-radius: 32px;
-        box-shadow: 
-            0 10px 30px rgba(0, 0, 0, 0.4),
-            inset 0 0 20px rgba(255, 255, 255, 0.02);
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s;
-    }
-
-    .glass-module:hover {
-        border-color: rgba(255, 255, 255, 0.15);
-    }
-
-    .story-section {
-        min-height: 280px;
-        position: relative;
-    }
-
-    .module-header {
-        padding: 1.25rem 2rem;
-        border-bottom: 1px solid var(--glass-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.03);
-    }
-
-    .location-tag {
-        font-size: 0.75rem;
-        font-weight: 800;
-        color: var(--accent-primary);
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        text-shadow: 0 0 15px var(--accent-glow);
-    }
-
-    .time-tag {
-        font-size: 0.8rem;
-        font-family: 'JetBrains Mono', monospace;
-        color: var(--text-dim);
-        background: rgba(0, 0, 0, 0.3);
-        padding: 0.3rem 0.8rem;
-        border-radius: 20px;
-    }
-
-    .viewport {
-        padding: 2rem;
-        line-height: 1.8;
-    }
-
-    .story-text {
-        font-size: 1.1rem;
-        color: var(--text-main);
-        letter-spacing: -0.01em;
-    }
-
-    /* Przycisk Acknowledge i inne interakcje */
-    .dismiss-btn {
-        background: linear-gradient(135deg, var(--accent-primary), #00c2ff);
-        color: #000;
-        border-radius: 20px;
-        padding: 1.2rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        box-shadow: 0 8px 20px var(--accent-glow);
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .dismiss-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 25px var(--accent-glow);
-        filter: brightness(1.1);
-    }
-
-    /* Styl paska przewijania (Scrollbar) */
-    .viewport::-webkit-scrollbar { width: 6px; }
-    .viewport::-webkit-scrollbar-track { background: transparent; }
-    .viewport::-webkit-scrollbar-thumb {
-        background: var(--glass-border);
-        border-radius: 10px;
-    }
-
-    /* Mobile Adaptability */
-    @media (max-width: 768px) {
-        .game-container { padding: 1.5rem 1rem; }
-        .glass-module { border-radius: 24px; }
-        .story-text { font-size: 1rem; }
-    }
-
 </style>

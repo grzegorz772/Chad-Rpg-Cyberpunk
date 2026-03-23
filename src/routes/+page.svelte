@@ -787,14 +787,30 @@
 		max-width: 200px;
 	}
 
-	/* Responsive Map */
-	@media (max-width: 900px) {
-		.map-modal-content {
-			grid-template-columns: 1fr;
+	/* Responsive */
+	@media (max-width: 1000px) {
+		.panel-layout {
+			grid-template-columns: 1fr 1.2fr 1fr;
+			grid-template-rows: auto auto;
 		}
-		.map-details-panel {
-			min-height: auto;
-		}
+		.stats-section { grid-column: 1; grid-row: 1; }
+		.actions-section { grid-column: 2; grid-row: 1 / span 2; }
+		.map-section { grid-column: 3; grid-row: 1; }
+		.utils-section-left { grid-column: 1; grid-row: 2; }
+		.utils-section-right { grid-column: 3; grid-row: 2; }
+		.places-to-go-wrapper { left: 20px; }
 	}
 
-	/* Buildings Menu */
+	@media (max-width: 600px) {
+		.panel-layout {
+			grid-template-columns: 1fr 1fr;
+			gap: 15px;
+		}
+		.actions-section { grid-column: 1 / span 2; grid-row: 1; }
+		.stats-section { grid-column: 1; grid-row: 2; }
+		.map-section { grid-column: 2; grid-row: 2; }
+		.utils-section-left { grid-column: 1; grid-row: 3; }
+		.utils-section-right { grid-column: 2; grid-row: 3; }
+		.panel-content { padding: 20px 20px 70px 20px; }
+	}
+	</style>
