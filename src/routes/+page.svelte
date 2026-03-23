@@ -5,6 +5,7 @@
 	import { fade, fly, scale } from 'svelte/transition'
 	import { cubicOut } from 'svelte/easing'
 	import { supabase } from '$lib/supabaseClient'
+	import { regionNames } from '$lib/components/utils/MapGenerator';
 	
 	let gameComponent: any;
 	let miniMapGrid: any[] = [];
@@ -273,7 +274,7 @@
 							{@const tile = miniMapGrid[selectedTile.y]?.[selectedTile.x]}
 							<div class="tile-info" in:fade>
 								<div class="tile-header">
-									<div class="type-badge" style="background: {tile.color}">{tile.type}</div>
+									<div class="type-badge" style="background: {tile.color}">{regionNames[tile.type] || tile.type}</div>
 									<h3 class="tile-name">{tile.name}</h3>
 								</div>
 								<p class="tile-desc">{tile.description}</p>

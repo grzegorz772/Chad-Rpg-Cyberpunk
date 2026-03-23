@@ -99,13 +99,14 @@ let regionColors: Record<string, string[]> = {
 }
 
 let regionNames: Record<string, string> = {
-	"city": "CITY",
-	"plains": "MAIN NEUTRAL",
-	"water": "DIVIDER",
-	"desert": "SECOND NEUTRAL",
-	"forest": "THIRD NEUTRAL",
-	"mountain": "FOURTH NEUTRAL"
+	"city": "City",
+	"plains": "Plains",
+	"water": "Water",
+	"desert": "Desert",
+	"forest": "Forest",
+	"mountain": "Mountain"
 }
+export { regionNames };
 
 // Funkcja generująca 5 odcieni z koloru bazowego
 function generateShades(baseColor: string): string[] {
@@ -120,11 +121,11 @@ function generateShades(baseColor: string): string[] {
 	};
 
 	return [
-		adjust(baseColor, 30),  // 30% jaśniejszy
-		adjust(baseColor, 15),  // 15% jaśniejszy
+		adjust(baseColor, 10),  // 10% jaśniejszy
+		adjust(baseColor, 5),   // 5% jaśniejszy
 		baseColor,              // Bazowy (środek)
-		adjust(baseColor, -15), // 15% ciemniejszy
-		adjust(baseColor, -30)  // 30% ciemniejszy
+		adjust(baseColor, -5),  // 5% ciemniejszy
+		adjust(baseColor, -10)  // 10% ciemniejszy
 	];
 }
 
