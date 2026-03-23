@@ -43,6 +43,7 @@ import {
 	let mapGenerated = false;
 	let mapGrid: any[] = [];
 	let selectedTile: any = null;
+	let generatingWorld = false;
 
 	// Funkcje do obsługi canvas (muszą zostać)
 	function renderMapCanvas() {
@@ -551,8 +552,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		}
 		
 		if (!mapGenerated) {
-			// Show loading message
-			$ui.errorWarnMsg = "🌍 Generating world... (this may take a moment)";
+			generatingWorld = true;
 			
 			// Wygeneruj mapę proceduralnie
 			mapGrid = generateMap();
@@ -573,19 +573,20 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 			generateAllRegionsWithAI()
 				.then(() => {
 					console.log('✨ All regions enhanced by AI!');
+					generatingWorld = false;
 					// Odśwież mapę po zakończeniu
 					setTimeout(() => {
 						renderMapCanvas();
-						$ui.errorWarnMsg = "";
-						$ui.successMsg = "✨ World fully generated! ✨";
+						$ui.successMsg = "World fully generated!";
 						setTimeout(() => $ui.successMsg = "", 3000);
 					}, 100);
 				})
 				.catch(err => {
 					console.error('Background generation failed:', err);
-					$ui.errorWarnMsg = "⚠️ Some regions may have placeholder names";
+					generatingWorld = false;
+					$ui.errorWarnMsg = "Some regions may have placeholder names";
 					setTimeout(() => {
-						if ($ui.errorWarnMsg === "⚠️ Some regions may have placeholder names") {
+						if ($ui.errorWarnMsg === "Some regions may have placeholder names") {
 							$ui.errorWarnMsg = "";
 						}
 					}, 5000);
@@ -670,6 +671,19 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 
 		<DescriptionWindow />
 		<MessageWindows />
+	{/if}
+
+	{#if generatingWorld}
+		<div class="quota-overlay" transition:fade>
+			<div class="glass-modal loading-state">
+				<div class="spinner"></div>
+				<h2 style="margin-top: 1.5rem;">GENERATING WORLD</h2>
+				<p>Syncing neural patterns and regional data. Please stand by.</p>
+				<button class="dismiss-btn" on:click={() => generatingWorld = false}>
+					GOT IT
+				</button>
+			</div>
+		</div>
 	{/if}
 
 	{#if quotaExceeded || highDemand || requestTimeout}
@@ -861,6 +875,10 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		width: 100%;
 		text-align: center;
 		box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.glass-modal h2 {

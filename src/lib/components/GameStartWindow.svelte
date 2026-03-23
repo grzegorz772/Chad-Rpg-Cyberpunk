@@ -309,6 +309,7 @@
 	}
 
 	.card-title {
+		color: white;
 		font-size: 1.5rem;
 		margin: 0 0 0.5rem 0;
 		font-weight: 700;
@@ -335,6 +336,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		color: white;
 	}
 
 	.card-footer {
@@ -354,6 +356,7 @@
 	}
 
 	.arrow {
+		color: white;
 		font-size: 1.2rem;
 		transition: transform 0.3s;
 	}
