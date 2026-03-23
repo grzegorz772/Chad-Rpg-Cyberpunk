@@ -3,7 +3,6 @@
 	import { backOut, cubicOut } from 'svelte/easing'
 
 	import LetterByLetter from './LetterByLetter.svelte'
-	import UiButtons from './UiButtons.svelte'
 	import GameStartWindow from './GameStartWindow.svelte'
 	import DescriptionWindow from './ItemDescWindow.svelte'
 	import MessageWindows from './InGameWarnMsgs.svelte'
@@ -358,7 +357,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		}, 1000)
 	}
 
-	function giveAnswer(choice: string) {
+	export function giveAnswer(choice: string) {
 		if (!choice || choice.trim().length === 0) return
 
 		if (choice.includes('sex') || choice.includes('kill')) {
