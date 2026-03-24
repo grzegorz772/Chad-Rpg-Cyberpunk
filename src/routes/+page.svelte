@@ -660,6 +660,13 @@
 		gap: 2.5rem;
 		margin-top: 1rem;
 	}
+	@media (max-width: 768px) {
+		.map-modal-content {
+			display: flex;
+			flex-direction: column;
+			width: 100%; /* Zapewnia, że na telefonie wykorzystasz całą szerokość */
+		}
+	}
 
 	.canvas-wrapper {
 		background: rgba(0, 0, 0, 0.3);
