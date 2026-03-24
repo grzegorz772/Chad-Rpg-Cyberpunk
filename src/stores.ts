@@ -109,3 +109,41 @@ export const languageSettings: Writable<{
 	foreignLanguage: LanguageSettingsData.foreignLanguage,
 	languageLevel: LanguageSettingsData.languageLevel
 })
+
+// stores.ts
+export interface ChatHistoryEntry {
+	id: number;
+	timestamp: string;
+	userChoice: string;  // Co wybrał/użytkownik wpisał
+	aiResponse: string;   // Odpowiedź AI (story)
+	choices: string[];    // Opcje które dostał użytkownik
+	location: string;     // Miejsce akcji
+}
+
+export const gameState: Writable<{
+	chatMessages: any[];
+	chatHistory: ChatHistoryEntry[];  // <-- DODAJ
+	enemyOnFrontend: boolean;
+	quotaExceeded: boolean;
+	highDemand: boolean;
+	requestTimeout: boolean;
+	worldPrompt: string;
+	mapGenerated: boolean;
+	mapGrid: any[];
+	generatingWorld: boolean;
+	answer: string;
+	dotty: string;
+}> = writable({
+	chatMessages: [],
+	chatHistory: [],  // <-- DODAJ
+	enemyOnFrontend: false,
+	quotaExceeded: false,
+	highDemand: false,
+	requestTimeout: false,
+	worldPrompt: '',
+	mapGenerated: false,
+	mapGrid: [],
+	generatingWorld: false,
+	answer: '',
+	dotty: '.'
+});

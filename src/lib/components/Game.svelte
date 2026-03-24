@@ -26,56 +26,107 @@
 	import Modal from './testing/Modal.svelte'
 	import { CHARACTER_CLASSES, STARTING_VALUES, SHOP_CONFIG } from '$lib/config/constants'
 	import { onMount } from 'svelte'
-import { 
-	generateMap, 
-	getFullWorldData, 
-	getMapGrid, 
-	MAP_SIZE,
-	findStartingLocation,
-	getRegionsInRadius,
-	enhanceRegionsWithAI,
-	updateWorldWithEnhancedRegions,
-	generateAllRegionsWithAI,
-	enhanceWorldTheme
-} from '$lib/components/utils/MapGenerator';
+	import { 
+		generateMap, 
+		getFullWorldData, 
+		getMapGrid, 
+		MAP_SIZE,
+		findStartingLocation,
+		getRegionsInRadius,
+		enhanceRegionsWithAI,
+		updateWorldWithEnhancedRegions,
+		generateAllRegionsWithAI,
+		enhanceWorldTheme
+	} from '$lib/components/utils/MapGenerator';
+	import { gameState } from '../../stores';
 
-	// Import z pliku .ts (nie .svelte!)
-	let mapGenerated = false;
-	let mapGrid: any[] = [];
-	let generatingWorld = false;
 
-// Eksport dla +page.svelte
-export function getMapGridFromGame() {
-	return mapGrid;
-}
-	let answer: string = ''
-	let chatMessages: any[] = []
-	let enemyOnFrontend: boolean = false
-	let dotty: string = '.'
-	let quotaExceeded: boolean = false
-	let highDemand: boolean = false
-	let requestTimeout: boolean = false
-	let worldPrompt: string = ''
+	export interface GameState {
+		chatMessages: ChatMessage[];
+		enemyOnFrontend: boolean;
+		quotaExceeded: boolean;
+		highDemand: boolean;
+		requestTimeout: boolean;
+		worldPrompt: string;
+		mapGenerated: boolean;
+		mapGrid: any[];
+		generatingWorld: boolean;
+		answer: string;
+		dotty: string;
+	}
 
-	// Animation for loading dots
-	onMount(() => {
-		const interval = setInterval(() => {
-			if (dotty === '...') {
-				dotty = ''
-			}
-			dotty += '.'
-		}, 400)
+	export interface ChatMessage {
+		role: 'user' | 'assistant';
+		content: any;
+	}
 
-		return () => clearInterval(interval)
-	})
 
-	// Game logic functions
-// Game logic functions
+	// Eksport dla +page.svelte
+	export function getMapGridFromGame() {
+		return $gameState.mapGrid;
+	}
+
+onMount(() => {
+	// Istniejący interval dla dotty
+	const dottyInterval = setInterval(() => {
+		if ($gameState.dotty === '...') {
+			$gameState.dotty = ''
+		}
+		$gameState.dotty += '.'
+	}, 400)
+
+	// Logger stanu gry co 5 sekund
+	const logInterval = setInterval(() => {
+		console.log('=== GAME STATE LOG (5s) ===');
+		console.log('Chat Messages:', $gameState.chatMessages);
+		console.log('Chat History:', $gameState.chatHistory);
+		console.log('World Prompt:', $gameState.worldPrompt);
+		console.log('Map Generated:', $gameState.mapGenerated);
+		console.log('Generating World:', $gameState.generatingWorld);
+		console.log('Quota Exceeded:', $gameState.quotaExceeded);
+		console.log('High Demand:', $gameState.highDemand);
+		console.log('Request Timeout:', $gameState.requestTimeout);
+		console.log('Answer:', $gameState.answer);
+		console.log('Dotty:', $gameState.dotty);
+		console.log('========================');
+	}, 5000);
+
+	// Cleanup przy odmontowaniu komponentu
+	return () => {
+		clearInterval(dottyInterval);
+		clearInterval(logInterval);
+	}
+})
+
+
+	// Game.svelte - dodaj tę funkcję
+	function addToChatHistory(userChoice: string, aiResponse: string, choices: string[], location: string) {
+		const newEntry: ChatHistoryEntry = {
+			id: $gameState.chatHistory.length + 1,
+			timestamp: new Date().toISOString(),
+			userChoice: userChoice,
+			aiResponse: aiResponse,
+			choices: choices,
+			location: location
+		};
+		
+		$gameState.chatHistory = [...$gameState.chatHistory, newEntry];
+		console.log('📜 Chat history updated:', newEntry);
+	}
+	
 	async function handleSubmit() {
 		$misc.loading = true
-		chatMessages = [...chatMessages, { role: 'user', content: $misc.query }]
+		
+		// Zapisz wybór użytkownika
+		const userChoice = $misc.query
+		
+		// Dodaj do chatMessages (dla kompatybilności)
+		$gameState.chatMessages = [...$gameState.chatMessages, { 
+			role: 'user', 
+			content: userChoice 
+		}]
 
-		const prompt = chatMessages.length > 0 ? $misc.query : getGamePrompt()
+		const prompt = $gameState.chatMessages.length > 0 ? $misc.query : getGamePrompt()
 		console.log('Sending prompt:', prompt)
 
 		// Pobierz aktualne ustawienia językowe z store
@@ -86,9 +137,9 @@ export function getMapGridFromGame() {
 		const controller = new AbortController()
 		const timeoutId = setTimeout(() => {
 			if ($misc.loading) {
-				requestTimeout = true
+				$gameState.requestTimeout = true
 				$misc.loading = false
-				controller.abort() // Actually stop the network request
+				controller.abort()
 			}
 		}, 90000)
 
@@ -98,20 +149,21 @@ export function getMapGridFromGame() {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ 
 					prompt,
-					language,      // Dodaj język
-					languageLevel  // Dodaj poziom CEFR
+					language,
+					languageLevel,
+					chatHistory: $gameState.chatHistory  // Wyślij historię do API
 				}),
-				signal: controller.signal // Link the abort signal
+				signal: controller.signal
 			})
 
 			clearTimeout(timeoutId)
-			requestTimeout = false
+			$gameState.requestTimeout = false
 
 			// Check for quota exceeded error
 			if (response.status === 429) {
 				const errorData = await response.json()
 				if (errorData.error === 'quota_exceeded') {
-					quotaExceeded = true
+					$gameState.quotaExceeded = true
 					$misc.loading = false
 					return
 				}
@@ -121,8 +173,8 @@ export function getMapGridFromGame() {
 			if (response.status === 503) {
 				const errorData = await response.json()
 				if (errorData.error === 'high_demand') {
-					highDemand = true
-					requestTimeout = false
+					$gameState.highDemand = true
+					$gameState.requestTimeout = false
 					$misc.loading = false
 					return
 				}
@@ -130,11 +182,9 @@ export function getMapGridFromGame() {
 
 			// Check for gateway timeout (Vercel/Prod)
 			if (response.status === 504) {
-				// If we already showed the 9s timeout modal, don't override it with the "High Traffic" one
-				if (requestTimeout) return
-
-				highDemand = true
-				requestTimeout = false
+				if ($gameState.requestTimeout) return
+				$gameState.highDemand = true
+				$gameState.requestTimeout = false
 				$misc.loading = false
 				return
 			}
@@ -148,13 +198,11 @@ export function getMapGridFromGame() {
 
 			// Helper to extract JSON from text that might have extra content
 			const extractJSON = (text: string): string => {
-				// Remove markdown code blocks
 				let cleaned = text
 					.replace(/```json\s*/g, '')
 					.replace(/```\s*/g, '')
 					.trim()
 
-				// Find the first { and last matching }
 				const firstBrace = cleaned.indexOf('{')
 				if (firstBrace === -1) return cleaned
 
@@ -177,13 +225,9 @@ export function getMapGridFromGame() {
 				const rawText = responseData.candidates[0].content.parts[0].text
 				const jsonString = extractJSON(rawText)
 				const parsed = JSON.parse(jsonString)
-				// If AI returns {gameData: {...}}, unwrap it; otherwise use as-is
 				gameData = parsed.gameData || parsed
 			} catch (error) {
-				console.error(
-					'JSON parse error, raw text:',
-					responseData.candidates[0].content.parts[0].text
-				)
+				console.error('JSON parse error, raw text:', responseData.candidates[0].content.parts[0].text)
 				throw error
 			}
 
@@ -205,49 +249,57 @@ export function getMapGridFromGame() {
 				$game.gameData.enemy.enemyMaxHp = $game.gameData.enemy.enemyHp
 			}
 
+			// ZAPISZ DO HISTORII
+			addToChatHistory(
+				userChoice,
+				gameData.story,
+				gameData.choices,
+				gameData.placeAndTime?.place || ''
+			)
+
 			$misc.started = true
 			$misc.place = $game.gameData.placeAndTime?.place || ''
 			$misc.time = $game.gameData.placeAndTime?.time || '00:00'
 
-			chatMessages = [...chatMessages, { role: 'assistant', content: gameData }]
+			$gameState.chatMessages = [...$gameState.chatMessages, { 
+				role: 'assistant', 
+				content: gameData 
+			}]
+			
 		} catch (error: any) {
-			if (error.name === 'AbortError' || requestTimeout) {
+			if (error.name === 'AbortError' || $gameState.requestTimeout) {
 				console.log('Request was aborted or timed out at 9s mark')
-				return // Keep the timeout modal visible and don't trigger handleError
+				return
 			} else {
 				console.error('Error in handleSubmit:', error)
 				handleError(error)
 			}
 		} finally {
-			// Do not reset $misc.loading here if it was a timeout,
-			// because the timeout block already set it to false
-			if (!requestTimeout) {
+			if (!$gameState.requestTimeout) {
 				$misc.loading = false
 			}
 		}
 	}
-
 	function getGamePrompt() {
-		const worldContext = worldPrompt 
-			? `The game world is described as follows: "${worldPrompt}". Use this context for all storytelling.`
+		const worldContext = $gameState.worldPrompt 
+			? `The game world is described as follows: "${$gameState.worldPrompt}". Use this context for all storytelling.`
 			: "This is a standard fantasy role-playing game world.";
 
 		return `This is a role-playing game where you'll be the 1st person character and storyteller. ${worldContext} You'll describe the world from a 3rd person perspective but when it's time for a conversation, interact with the player from a 1st person npc perspective. All these 1st person and 3rd person content will be in gameData.story! Shape the storyline based on players choices.
 
-All of your responses MUST include a valid json object, with this exact properties(keys):
+	All of your responses MUST include a valid json object, with this exact properties(keys):
 
-"gameData": {
-	"placeAndTime": { "place": "Enchanted Library", "time": "14:00" },
-	"story": "As you step into the vast, towering library...",
-	"event": { "inCombat": false, "shopMode": null, "lootMode": false },
-	"choices": ["Approach the librarian for assistance.", "Browse the shelves for a specific book.", "Sit down and read a random tome."],
-	"enemy": {},
-	"lootBox": []
-}
-
-Don't forget to include at least 3 unique choices for the user to choose.`
+	"gameData": {
+		"placeAndTime": { "place": "Enchanted Library", "time": "14:00" },
+		"story": "As you step into the vast, towering library...",
+		"event": { "inCombat": false, "shopMode": null, "lootMode": false },
+		"choices": ["Approach the librarian for assistance.", "Browse the shelves for a specific book.", "Sit down and read a random tome."],
+		"enemy": {},
+		"lootBox": []
 	}
 
+	Don't forget to include at least 3 unique choices for the user to choose.`
+	}
 	function handleError(error: any) {
 		console.error('Game error:', error)
 		setTimeout(() => {
@@ -283,7 +335,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 
 		handleSubmit().then(() => {
 			$misc.query = ''
-			answer = ''
+			$gameState.answer = ''
 		})
 
 		if (!$misc.started) {
@@ -434,7 +486,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 	}
 	async function startMedievalGame(answer: string) {
 		// Reset game state
-		chatMessages = [];
+		$gameState.chatMessages = [];
 		$game.gameData.lootBox = [];
 		$game.gameData.placeAndTime = { place: '', time: '00:00' };
 		$game.gameData.shop = [];
@@ -445,7 +497,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		$character.gold = STARTING_VALUES.GOLD;
 		
 		// Save world prompt for future context
-		worldPrompt = answer;
+		$gameState.worldPrompt = answer;
 
 		const heroClass = $game.gameData.heroClass;
 		if (heroClass === 'mage') {
@@ -458,11 +510,11 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 			$character.inventory = [...medievalWarriorInventory];
 		}
 		
-		if (!mapGenerated) {
-			generatingWorld = true;
+		if (!$gameState.mapGenerated) {
+			$gameState.generatingWorld = true;
 			
 			// Wygeneruj mapę proceduralnie (najpierw szara)
-			mapGrid = generateMap();
+			$gameState.mapGrid = generateMap();
 			console.log('✅ Base map generated');
 
 			// 1. Najpierw pobierz motyw wizualny (kolory i nazwy typów)
@@ -476,16 +528,16 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 			generateAllRegionsWithAI()
 				.then(() => {
 					console.log('✨ All regions enhanced by AI!');
-					generatingWorld = false;
+					$gameState.generatingWorld = false;
 					$ui.successMsg = "World fully generated!";
 					setTimeout(() => $ui.successMsg = "", 3000);
 				})
 				.catch(err => {
 					console.error('Background generation failed:', err);
-					generatingWorld = false;
+					$gameState.generatingWorld = false;
 				});
 			
-			mapGenerated = true;
+			$gameState.mapGenerated = true;
 		}
 		
 		giveAnswer(answer);
@@ -534,7 +586,7 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 							{#if $misc.loading}
 								<div class="neural-loading">
 									<div class="spinner"></div>
-									<span>SYNCING NEURAL FEED{dotty}</span>
+									<span>SYNCING NEURAL FEED{$gameState.dotty}</span>
 								</div>
 							{:else if $game.gameData.story}
 								<div class="story-text" transition:fade>
@@ -563,30 +615,41 @@ Don't forget to include at least 3 unique choices for the user to choose.`
 		<MessageWindows />
 	{/if}
 
-	{#if generatingWorld}
+	<!-- World generation overlay - POZA game-container -->
+	{#if $gameState.generatingWorld}
 		<div class="quota-overlay" transition:fade>
 			<div class="glass-modal loading-state">
 				<div class="spinner"></div>
 				<h2 style="margin-top: 1.5rem;">GENERATING WORLD</h2>
 				<p>Syncing neural patterns and regional data. Please stand by.</p>
-				<button class="dismiss-btn" on:click={() => generatingWorld = false}>
+				<button class="dismiss-btn" on:click={() => $gameState.generatingWorld = false}>
 					GOT IT
 				</button>
 			</div>
 		</div>
 	{/if}
 
-	{#if quotaExceeded || highDemand || requestTimeout}
+	<!-- Error overlays - POZA game-container -->
+	{#if $gameState.quotaExceeded || $gameState.highDemand || $gameState.requestTimeout}
 		<div class="quota-overlay" transition:fade>
 			<div class="glass-modal error-state">
-				<div class="quota-icon">{quotaExceeded ? '⚠️' : requestTimeout ? '🤖' : '🚀'}</div>
-				<h2>{quotaExceeded ? 'QUOTA EXCEEDED' : requestTimeout ? 'TIMEOUT' : 'HIGH TRAFFIC'}</h2>
+				<div class="quota-icon">
+					{$gameState.quotaExceeded ? '⚠️' : $gameState.requestTimeout ? '🤖' : '🚀'}
+				</div>
+				<h2>
+					{$gameState.quotaExceeded ? 'QUOTA EXCEEDED' : $gameState.requestTimeout ? 'TIMEOUT' : 'HIGH TRAFFIC'}
+				</h2>
 				<p>
-					{quotaExceeded 
+					{$gameState.quotaExceeded 
 						? 'The neural network has reached its processing limit. Please stand by.' 
 						: 'Connection to the central core is unstable. Retry sequence later.'}
 				</p>
-				<button class="dismiss-btn" on:click={() => { quotaExceeded = false; highDemand = false; requestTimeout = false; $misc.loading = false; }}>
+				<button class="dismiss-btn" on:click={() => { 
+					$gameState.quotaExceeded = false; 
+					$gameState.highDemand = false; 
+					$gameState.requestTimeout = false; 
+					$misc.loading = false; 
+				}}>
 					ACKNOWLEDGE
 				</button>
 			</div>
