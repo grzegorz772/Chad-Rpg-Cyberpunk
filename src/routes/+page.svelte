@@ -283,9 +283,7 @@
 									<span>LNG: {selectedTile.x}</span>
 								</div>
 								<div class="tile-actions">
-									<button class="travel-btn" on:click={() => handleAnswer(`I'll travel to ${tile.name}`)}>
-										TRAVEL HERE
-									</button>
+
 								</div>
 							</div>
 						{:else}
