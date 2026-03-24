@@ -39,6 +39,7 @@
 		enhanceWorldTheme
 	} from '$lib/components/utils/MapGenerator';
 	import { gameState } from '../../stores';
+	import { FunctionResponseScheduling } from '@google/genai'
 
 
 	export interface GameState {
@@ -586,7 +587,7 @@ onMount(() => {
 							{#if $misc.loading}
 								<div class="neural-loading">
 									<div class="spinner"></div>
-									<span>SYNCING NEURAL FEED{$gameState.dotty}</span>
+									<span>Generating Responses{$gameState.dotty}</span>
 								</div>
 							{:else if $game.gameData.story}
 								<div class="story-text" transition:fade>
