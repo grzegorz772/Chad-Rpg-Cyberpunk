@@ -13,6 +13,7 @@
 	let mapOn = false;
 	let inventoryOn = false;
 	let selectedTile: any = null;
+	let selectedBuilding: any = null;
 
 	// Dynamic buildings based on player position
 	$: playerX = $gameState.player?.x || 0;
@@ -23,18 +24,37 @@
 		? currentRegion.buildings.ids.map((id: string) => $worldStore.addedStaticData.buildings[id])
 		: [];
 
-	function upgradeStat(building: any) {
-		if (!$gameState.player) return;
+	function openBuildingPopup(building: any) {
+		selectedBuilding = building;
+	}
+
+	function confirmUpgrade() {
+		if (!$gameState.player || !selectedBuilding) return;
 		const cost = 50; // Base cost for now
 		if ($gameState.player.gold >= cost) {
 			$gameState.player.gold -= cost;
-			const { stat, value } = building.upgradeSystem;
+			const { stat, value } = selectedBuilding.upgradeSystem;
 			($gameState.player.stats as any)[stat] += value;
-			$ui.toastMsg = `Upgraded ${stat} at ${building.name}!`;
+			$ui.toastMsg = `Upgraded ${stat} at ${selectedBuilding.name}!`;
+			selectedBuilding = null;
 			setTimeout(() => $ui.toastMsg = '', 3000);
 		} else {
 			$ui.errorWarnMsg = "Not enough gold!";
 			setTimeout(() => $ui.errorWarnMsg = '', 3000);
+		}
+	}
+
+	function movePlayer(dx: number, dy: number) {
+		if (!$gameState.player) return;
+		const newX = Math.max(0, Math.min(19, $gameState.player.x + dx));
+		const newY = Math.max(0, Math.min(19, $gameState.player.y + dy));
+		
+		if (newX !== $gameState.player.x || newY !== $gameState.player.y) {
+			$gameState.player.x = newX;
+			$gameState.player.y = newY;
+			
+			const dir = dx > 0 ? "east" : dx < 0 ? "west" : dy > 0 ? "south" : "north";
+			handleAnswer(`I'll move ${dir}.`);
 		}
 	}
 
@@ -99,6 +119,21 @@
 					ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
 				}
 			}
+		}
+
+		// Show Player Position
+		if ($gameState.player) {
+			const px = $gameState.player.x;
+			const py = $gameState.player.y;
+			ctx.fillStyle = "#ff0000";
+			ctx.beginPath();
+			ctx.arc(px * cellSize + cellSize/2, py * cellSize + cellSize/2, cellSize/3, 0, Math.PI * 2);
+			ctx.fill();
+			
+			// Pulse effect for player
+			ctx.strokeStyle = "white";
+			ctx.lineWidth = 1;
+			ctx.stroke();
 		}
 
 		if (showSelection && selectedTile) {
@@ -192,7 +227,7 @@
 						<div class="places-to-go glass-container">
 							{#if currentBuildings.length > 0}
 								{#each currentBuildings as building}
-									<button disabled={$misc.loading || $game.gameData.event.inCombat} on:click={() => upgradeStat(building)}>
+									<button disabled={$misc.loading || $game.gameData.event.inCombat} on:click={() => openBuildingPopup(building)}>
 										<img src={`images/landscape-svgs/${building.type}.svg`} alt={building.type} 
 											 on:error={(e) => e.currentTarget.src = 'images/landscape-svgs/custom.svg'} />
 										<div class="bld-info">
@@ -214,7 +249,7 @@
 				<!-- Inventory Menu -->
 				{#if inventoryOn}
 					<div class="inventory-wrapper" transition:fly={{ y: 20, duration: 300 }}>
-						<div class="inventory-grid glass-container">
+						<div class="inventory-grid glass-container inventory-opaque">
 							{#each $gameState.player?.inventory || Array(6).fill(null) as item, i}
 								<div class="inventory-slot" transition:scale={{delay: i * 50, duration: 300, easing: backOut}}>
 									{#if item}
@@ -284,6 +319,23 @@
 						</button>
 					</div>
 				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- BUILDING POPUP -->
+	{#if selectedBuilding}
+		<div class="bld-popup-overlay" transition:fade on:click|self={() => selectedBuilding = null}>
+			<div class="bld-popup" transition:scale={{ duration: 300, easing: backOut }}>
+				<img src={`images/landscape-svgs/${selectedBuilding.type}.svg`} alt={selectedBuilding.type} style="width: 80px; height: 80px; margin-bottom: 20px;" 
+					 on:error={(e) => e.currentTarget.src = 'images/landscape-svgs/custom.svg'} />
+				<h2>{selectedBuilding.name}</h2>
+				<span class="cost">COST: 50 GOLD</span>
+				<p class="desc">
+					This structure allows you to permanently enhance your <strong>{selectedBuilding.upgradeSystem.stat}</strong> 
+					by <strong>+{selectedBuilding.upgradeSystem.value}</strong> points.
+				</p>
+				<button class="upgrade-btn" on:click={confirmUpgrade}>UPGRADE STAT</button>
 			</div>
 		</div>
 	{/if}
@@ -849,6 +901,116 @@
 		.places-to-go-wrapper { left: 20px; }
 	}
 
+	/* Navigation Controls */
+	.navigation-controls {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 5px;
+		margin-bottom: 20px;
+	}
+
+	.nav-row {
+		display: flex;
+		gap: 5px;
+	}
+
+	.nav-btn {
+		width: 45px;
+		height: 45px;
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		border-radius: 12px;
+		color: var(--accent-primary);
+		font-size: 1.2rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s;
+		backdrop-filter: blur(10px);
+	}
+
+	.nav-btn:hover {
+		background: rgba(0, 242, 255, 0.2);
+		border-color: var(--accent-primary);
+		transform: scale(1.05);
+	}
+
+	.nav-btn:active {
+		transform: scale(0.95);
+	}
+
+	.inventory-opaque {
+		background: rgba(10, 12, 18, 0.95) !important;
+		backdrop-filter: blur(40px) !important;
+	}
+
+	/* Building Popup */
+	.bld-popup-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.8);
+		backdrop-filter: blur(8px);
+		z-index: 1000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
+	}
+
+	.bld-popup {
+		background: var(--glass-bg);
+		backdrop-filter: blur(30px);
+		border: 1px solid var(--glass-border);
+		border-radius: 32px;
+		padding: 40px;
+		max-width: 400px;
+		width: 100%;
+		text-align: center;
+		box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+	}
+
+	.bld-popup h2 {
+		color: #fff;
+		font-size: 1.8rem;
+		margin-bottom: 10px;
+	}
+
+	.bld-popup .cost {
+		color: #fcc419;
+		font-weight: 800;
+		font-size: 1.2rem;
+		margin-bottom: 20px;
+		display: block;
+	}
+
+	.bld-popup .desc {
+		color: var(--text-dim);
+		line-height: 1.6;
+		margin-bottom: 30px;
+	}
+
+	.upgrade-btn {
+		width: 100%;
+		padding: 15px;
+		background: var(--accent-primary);
+		color: #000;
+		border: none;
+		border-radius: 16px;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.3s;
+	}
+
+	.upgrade-btn:hover {
+		transform: scale(1.02);
+		filter: brightness(1.1);
+	}
+
+	/* ============================================
+	DYNAMIC MENUS (BUILDINGS & INVENTORY)
+	============================================ */
 	.places-to-go-wrapper, .inventory-wrapper {
 		position: absolute;
 		bottom: 100%;
@@ -863,7 +1025,7 @@
 		grid-template-columns: repeat(3, 1fr);
 		gap: 15px;
 		padding: 20px;
-		background: var(--glass-bg);
+		background: rgba(10, 12, 18, 0.9);
 		backdrop-filter: blur(30px);
 		border: 1px solid var(--glass-border);
 		border-radius: 24px;
@@ -908,59 +1070,136 @@
 	.bld-stat {
 		font-size: 0.7rem;
 		color: var(--accent-primary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		font-weight: 600;
 	}
 
 	.no-buildings {
-		grid-column: 1 / span 3;
+		grid-column: 1 / -1;
 		text-align: center;
-		padding: 30px;
+		padding: 40px;
 		color: var(--text-dim);
 	}
 
 	.no-buildings p {
 		font-weight: 900;
-		letter-spacing: 0.2em;
+		letter-spacing: 0.3em;
 		margin-bottom: 5px;
 	}
 
-	/* Inventory */
+	/* Inventory Grid */
 	.inventory-grid {
-		grid-template-columns: repeat(3, 1fr);
-		max-width: 400px;
-		margin: 0 auto;
+		grid-template-columns: repeat(6, 1fr);
 	}
 
 	.inventory-slot {
 		aspect-ratio: 1;
-		background: rgba(0, 0, 0, 0.3);
+		background: rgba(255, 255, 255, 0.03);
 		border: 1px solid var(--glass-border);
 		border-radius: 12px;
 		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		overflow: hidden;
+		transition: all 0.3s;
+		cursor: pointer;
+	}
+
+	.inventory-slot:hover {
+		background: rgba(255, 255, 255, 0.08);
+		border-color: var(--accent-secondary);
+		transform: scale(1.05);
 	}
 
 	.inventory-slot img {
 		width: 70%;
 		height: 70%;
-		object-fit: contain;
 		z-index: 2;
-	}
-
-	.empty-slot {
-		width: 100%;
-		height: 100%;
-		background: radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 70%);
 	}
 
 	.slot-bg {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(45deg, transparent, rgba(255,255,255,0.02));
-		z-index: 1;
+		background: radial-gradient(circle at center, rgba(112, 0, 255, 0.1) 0%, transparent 70%);
+		opacity: 0;
+		transition: opacity 0.3s;
+	}
+
+	.inventory-slot:hover .slot-bg {
+		opacity: 1;
+	}
+
+	.empty-slot {
+		width: 20%;
+		height: 20%;
+		background: var(--glass-border);
+		border-radius: 50%;
+	}
+
+	/* Responsive Mobile Fixes */
+	@media (max-width: 768px) {
+		.panel-content {
+			padding: 20px 15px 80px 15px;
+			border-radius: 24px 24px 0 0;
+		}
+
+		.panel-layout {
+			grid-template-columns: repeat(3, 1fr);
+			grid-template-rows: auto auto;
+			gap: 10px;
+		}
+
+		.actions-section {
+			grid-column: 2;
+			grid-row: 1;
+		}
+
+		.stats-section {
+			grid-column: 1;
+			grid-row: 1;
+			align-items: flex-start;
+		}
+
+		.map-section {
+			grid-column: 3;
+			grid-row: 1;
+			justify-content: flex-end;
+		}
+
+		.utils-section-left {
+			grid-column: 1 / span 2;
+			grid-row: 2;
+			justify-content: flex-start;
+		}
+
+		.utils-section-right {
+			grid-column: 3;
+			grid-row: 2;
+			justify-content: flex-end;
+		}
+
+		.glass-btn {
+			padding: 8px;
+			min-width: 60px;
+		}
+
+		.main-action {
+			min-width: 90px;
+			padding: 12px;
+		}
+
+		.circular-minimap {
+			width: 70px;
+			height: 70px;
+		}
+
+		.places-to-go, .inventory-grid {
+			grid-template-columns: repeat(2, 1fr);
+			left: 10px;
+			right: 10px;
+		}
+
+		.inventory-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
 	}
 </style>
