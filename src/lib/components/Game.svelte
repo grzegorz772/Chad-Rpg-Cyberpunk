@@ -287,20 +287,24 @@ onMount(() => {
 			? `The game world is described as follows: "${$gameState.worldPrompt}". Use this context for all storytelling.`
 			: "This is a standard fantasy role-playing game world.";
 
-		return `This is a role-playing game where you'll be the 1st person character and storyteller. ${worldContext} You'll describe the world from a 3rd person perspective but when it's time for a conversation, interact with the player from a 1st person npc perspective. All these 1st person and 3rd person content will be in gameData.story! Shape the storyline based on players choices.
+		return `This is a role-playing game where you'll be the 1st person character and storyteller. ${worldContext} 
 
-	All of your responses MUST include a valid json object, with this exact properties(keys):
+		VISUAL STYLE: All character, enemy, and location descriptions should evoke a "PixelArtRedmond 1.5V" aesthetic - high-quality, vibrant, detailed pixel art with a modern fantasy feel.
 
-	"gameData": {
-		"placeAndTime": { "place": "Enchanted Library", "time": "14:00" },
-		"story": "As you step into the vast, towering library...",
-		"event": { "inCombat": false, "shopMode": null, "lootMode": false },
-		"choices": ["Approach the librarian for assistance.", "Browse the shelves for a specific book.", "Sit down and read a random tome."],
-		"enemy": {},
-		"lootBox": []
-	}
+		You'll describe the world from a 3rd person perspective but when it's time for a conversation, interact with the player from a 1st person npc perspective. All these 1st person and 3rd person content will be in gameData.story! Shape the storyline based on players choices.
 
-	Don't forget to include at least 3 unique choices for the user to choose.`
+		All of your responses MUST include a valid json object, with this exact properties(keys):
+
+		"gameData": {
+			"placeAndTime": { "place": "Enchanted Library", "time": "14:00" },
+			"story": "As you step into the vast, towering library...",
+			"event": { "inCombat": false, "shopMode": null, "lootMode": false },
+			"choices": ["Approach the librarian for assistance.", "Browse the shelves for a specific book.", "Sit down and read a random tome."],
+			"enemy": {},
+			"lootBox": []
+		}
+
+		Don't forget to include at least 3 unique choices for the user to choose.`
 	}
 	function handleError(error: any) {
 		console.error('Game error:', error)

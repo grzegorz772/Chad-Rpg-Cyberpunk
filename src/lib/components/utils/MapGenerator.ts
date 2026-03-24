@@ -629,14 +629,54 @@ const staticDataTemplates = {
   },
   enemies: {
     "001": {
-      name: "LLM NAME",
-      description: "LLM DESCRIPTION",
+      name: "Goblin Scout",
+      description: "A small, agile creature with a mean streak.",
       statistics: {
-        magicArmor: "10%", armorArmor: "10%", magicPenetration: "5%",
-        armorPenetration: "5%", magicDamage: "10", physicalDamage: "10",
-        imagePath: "./images/enemies/exampleEnemy.png"
+        magicArmor: "5%", armorArmor: "10%", magicPenetration: "0%",
+        armorPenetration: "15%", magicDamage: "0", physicalDamage: "14",
+        imagePath: "./images/enemies/goblin_scout.png"
       },
-      abilities: { "001": { name: "Strike", description: "Basic attack", id: "001", type: "physical", value: 10 } }
+      abilities: { "001": { name: "Quick Slash", description: "A fast but weak physical strike.", id: "001", type: "physical", value: 14 } }
+    },
+    "002": {
+      name: "Arcane Spirit",
+      description: "A flickering essence of pure magical energy.",
+      statistics: {
+        magicArmor: "30%", armorArmor: "0%", magicPenetration: "20%",
+        armorPenetration: "0%", magicDamage: "22", physicalDamage: "0",
+        imagePath: "./images/enemies/arcane_spirit.png"
+      },
+      abilities: { "001": { name: "Mana Pulse", description: "Releases a wave of raw magic.", id: "001", type: "magical", value: 22 } }
+    },
+    "003": {
+      name: "Stone Golem",
+      description: "A massive construct built from enchanted granite.",
+      statistics: {
+        magicArmor: "15%", armorArmor: "45%", magicPenetration: "0%",
+        armorPenetration: "5%", magicDamage: "5", physicalDamage: "28",
+        imagePath: "./images/enemies/stone_golem.png"
+      },
+      abilities: { "001": { name: "Crushing Blow", description: "A slow but devastating smash.", id: "001", type: "physical", value: 28 } }
+    },
+    "004": {
+      name: "Forest Stalker",
+      description: "A predator that blends perfectly with the foliage.",
+      statistics: {
+        magicArmor: "10%", armorArmor: "15%", magicPenetration: "5%",
+        armorPenetration: "20%", magicDamage: "0", physicalDamage: "20",
+        imagePath: "./images/enemies/forest_stalker.png"
+      },
+      abilities: { "001": { name: "Ambush", description: "Strikes from the shadows with lethal precision.", id: "001", type: "physical", value: 20 } }
+    },
+    "005": {
+      name: "Desert Nomad",
+      description: "A hardened survivor of the shifting sands.",
+      statistics: {
+        magicArmor: "15%", armorArmor: "20%", magicPenetration: "10%",
+        armorPenetration: "15%", magicDamage: "8", physicalDamage: "18",
+        imagePath: "./images/enemies/desert_nomad.png"
+      },
+      abilities: { "001": { name: "Sand Veil Strike", description: "Uses the dust to blind and strike.", id: "001", type: "physical", value: 18 } }
     }
   }
 };
@@ -659,26 +699,18 @@ export function buildFullWorldWithStaticData(): any {
   const seed = fullWorldData.seed || 1337;
 
   for (const [regionId, region] of Object.entries(worldWithStatic.regions) as [string, any][]) {
+    // BUILDINGS GENERATION
     if (region.type === 'city') {
-      // Check if buildings already exist to maintain state, or generate deterministically
       if (!region.buildings || !region.buildings.ids || region.buildings.ids.length === 0) {
         const buildingKeys = Object.keys(staticDataTemplates.buildings);
-        
-        // Deterministic shuffle using regionId and world seed
         const deterministicShuffled = [...buildingKeys].sort((a, b) => {
           const hashA = (parseInt(regionId) * 17 + a.length * 31 + seed) % 100;
           const hashB = (parseInt(regionId) * 17 + b.length * 31 + seed) % 100;
           return hashA - hashB;
         });
-        
         const selectedBuildings = deterministicShuffled.slice(0, 3);
-        
-        region.buildings = {
-          amount: 3,
-          ids: selectedBuildings
-        };
+        region.buildings = { amount: 3, ids: selectedBuildings };
       }
-      
       for (const buildingId of region.buildings.ids) {
         if (!worldWithStatic.addedStaticData.buildings[buildingId]) {
           worldWithStatic.addedStaticData.buildings[buildingId] = {
@@ -689,16 +721,45 @@ export function buildFullWorldWithStaticData(): any {
       }
     }
     
-    if (region.enemy?.isEnemy === true) {
-      const enemyId = `${regionId}_enemy`;
-      if (!worldWithStatic.addedStaticData.enemies[enemyId]) {
-        worldWithStatic.addedStaticData.enemies[enemyId] = {
-          ...staticDataTemplates.enemies["001"],
-          id: enemyId,
-          name: `Guardian of ${region.name}`
-        };
+    // DETERMINISTIC ENEMY GENERATION
+    // City and Water regions don't have enemies by default
+    if (region.type !== 'city' && region.type !== 'water') {
+      // Improved deterministic hash to avoid grid patterns
+      // Using a combination of X, Y and Seed with prime numbers
+      const rx = region.x;
+      const ry = region.y;
+      const noise = Math.abs(Math.sin(rx * 12.9898 + ry * 78.233 + seed) * 43758.5453) % 1;
+      
+      // Lower probability (e.g. 15%) to scatter them more
+      if (noise < 0.15) {
+        region.enemy = { isEnemy: true };
+        
+        // Pick enemy based on region type
+        const enemyKeys = Object.keys(staticDataTemplates.enemies);
+        let pool = enemyKeys;
+        if (region.type === 'forest') pool = ["004", "001", "002"];
+        if (region.type === 'desert') pool = ["005", "001", "003"];
+        if (region.type === 'mountain') pool = ["003", "002"];
+        
+        const enemyIdx = Math.floor(Math.abs(Math.cos(rx * 43.123 + ry * 19.456 + seed) * 100) % pool.length);
+        const enemyTemplateId = pool[enemyIdx];
+        const enemyId = `${regionId}_enemy`;
+        
+        region.enemy.id = enemyId;
+        
+        if (!worldWithStatic.addedStaticData.enemies[enemyId]) {
+          const template = staticDataTemplates.enemies[enemyTemplateId as keyof typeof staticDataTemplates.enemies];
+          worldWithStatic.addedStaticData.enemies[enemyId] = {
+            ...template,
+            id: enemyId,
+            name: `${template.name} of ${region.name}`
+          };
+        }
+      } else {
+        region.enemy = { isEnemy: false, id: null };
       }
-      region.enemy.id = enemyId;
+    } else {
+      region.enemy = { isEnemy: false, id: null };
     }
   }
 
@@ -747,16 +808,26 @@ export function markRegionAsGenerated(regionId: string) {
 	generatedRegionsSet.add(regionId);
 }
 
-export function initRegionBatch() {
+export function initRegionBatch(startX: number, startY: number) {
 	if (!fullWorldData) return;
-	allRegionIds = Object.keys(fullWorldData.regions);
+	
+	// Sort all regions by distance from start position
+	allRegionIds = Object.keys(fullWorldData.regions).sort((a, b) => {
+		const regA = fullWorldData.regions[a];
+		const regB = fullWorldData.regions[b];
+		const distA = Math.hypot(regA.x - startX, regA.y - startY);
+		const distB = Math.hypot(regB.x - startX, regB.y - startY);
+		return distA - distB;
+	});
+	
 	currentBatchIndex = 0;
 }
 
 export function getNextBatch(): string[] {
+	const BATCH_SIZE_NINE = 9;
 	if (currentBatchIndex >= allRegionIds.length) return [];
-	const batch = allRegionIds.slice(currentBatchIndex, currentBatchIndex + BATCH_SIZE);
-	currentBatchIndex += BATCH_SIZE;
+	const batch = allRegionIds.slice(currentBatchIndex, currentBatchIndex + BATCH_SIZE_NINE);
+	currentBatchIndex += BATCH_SIZE_NINE;
 	return batch;
 }
 
@@ -765,8 +836,9 @@ export async function generateAllRegionsWithAI(): Promise<void> {
 	isGeneratingBatch = true;
 	
 	const startLoc = findStartingLocation();
-	const priorityRegions = getRegionsInRadius(startLoc.x, startLoc.y, 2);
 	
+	// Initial priority area (immediate vicinity)
+	const priorityRegions = getRegionsInRadius(startLoc.x, startLoc.y, 1);
 	const priorityEnhanced = await enhanceRegionsWithAI(priorityRegions);
 	updateWorldWithEnhancedRegions(priorityEnhanced);
 	
@@ -774,16 +846,23 @@ export async function generateAllRegionsWithAI(): Promise<void> {
 		markRegionAsGenerated(id);
 	}
 	
-	initRegionBatch();
-	allRegionIds = allRegionIds.filter(id => !priorityRegions.includes(id));
+	// Initialize batch queue sorted by distance from start
+	initRegionBatch(startLoc.x, startLoc.y);
+	// Filter out already generated regions
+	allRegionIds = allRegionIds.filter(id => !generatedRegionsSet.has(id));
 	
 	while (true) {
 		const batch = getNextBatch();
 		if (batch.length === 0) break;
+		
+		console.log(`📦 Processing batch of ${batch.length} regions...`);
 		const enhanced = await enhanceRegionsWithAI(batch);
 		updateWorldWithEnhancedRegions(enhanced);
+		
 		for (const id of batch) markRegionAsGenerated(id);
-		if (batch.length === BATCH_SIZE) await new Promise(r => setTimeout(r, 1000));
+		
+		// Wait to avoid rate limiting and allow UI updates
+		await new Promise(r => setTimeout(r, 800));
 	}
 	
 	isGeneratingBatch = false;

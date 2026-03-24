@@ -95,6 +95,20 @@
 
 	function handleAnswer(answer: string) {
 		if (gameComponent && gameComponent.giveAnswer) {
+			// CHECK FOR ENEMY ENCOUNTER
+			const playerX = $gameState.player?.x || 0;
+			const playerY = $gameState.player?.y || 0;
+			const regionId = `${playerX.toString().padStart(2, '0')}${playerY.toString().padStart(2, '0')}`;
+			const region = $worldStore?.regions?.[regionId];
+
+			if (region?.enemy?.isEnemy) {
+				const enemy = $worldStore.addedStaticData.enemies[region.enemy.id];
+				console.log('⚔️ ENEMY ENCOUNTER:', enemy);
+				$game.gameData.event.inCombat = true;
+				$game.gameData.enemy = enemy;
+				// You could call gameComponent.triggerCombat(enemy) here if it exists
+			}
+
 			gameComponent.giveAnswer(answer);
 			mapOn = false;
 		}
@@ -118,6 +132,16 @@
 					ctx.fillStyle = tile.color;
 					ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
 					
+					// TEST: Show Enemy Marker (Small Dark Red Dot)
+					const regionId = `${x.toString().padStart(2, '0')}${y.toString().padStart(2, '0')}`;
+					const region = $worldStore?.regions?.[regionId];
+					if (region?.enemy?.isEnemy) {
+						ctx.fillStyle = "rgba(139, 0, 0, 0.6)";
+						ctx.beginPath();
+						ctx.arc(x * cellSize + cellSize/2, y * cellSize + cellSize/2, cellSize/5, 0, Math.PI * 2);
+						ctx.fill();
+					}
+
 					// Draw border between regions
 					ctx.strokeStyle = "rgba(0,0,0,0.1)";
 					ctx.lineWidth = 0.5;
