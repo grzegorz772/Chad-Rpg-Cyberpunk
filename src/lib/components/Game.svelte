@@ -124,7 +124,8 @@ onMount(() => {
 				body: JSON.stringify({ 
 					text, 
 					language: $languageSettings.foreignLanguage,
-					languageLevel: $languageSettings.languageLevel
+					languageLevel: $languageSettings.languageLevel,
+					nativeLanguage: $languageSettings.nativeLanguage
 				})
 			});
 			if (res.ok) {

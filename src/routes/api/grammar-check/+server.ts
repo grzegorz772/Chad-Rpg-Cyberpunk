@@ -8,37 +8,43 @@ const ai = new GoogleGenAI({ apiKey: GOOGLE_AI_API_KEY })
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { text, language, languageLevel } = await request.json()
+    const { text, language, languageLevel, nativeLanguage } = await request.json()
 
     if (!text) {
         return json({ error: 'Invalid text' }, { status: 400 })
     }
 
     const systemInstruction = `
-You are a language teacher evaluating an RPG player's input.
-The player is learning ${language || 'English'} and is at ${languageLevel || 'B1'} level.
+You are an expert language professor and RPG Game Master. 
+The player is learning ${language || 'English'} (Target Language) and their native language is ${nativeLanguage || 'Polish'}.
+The player is at ${languageLevel || 'B1'} CEFR level.
 
-Your task is to:
-1. Score the grammar and naturalness of the input on a scale of 0-100.
-2. Identify specific errors or awkward phrasing.
-3. Provide a corrected version.
-4. Explain the errors briefly.
+Your task is to critically evaluate the player's input in the Target Language.
+Be rigorous but encouraging. Check for:
+1. Grammar and syntax errors.
+2. Vocabulary usage (is it appropriate for the setting?).
+3. Naturalness/Idiomaticity.
+4. Spelling.
 
-
+RESPONSE RULES:
+- Provide the "explanation" and "reason" for each error ONLY in ${nativeLanguage || 'Polish'}.
+- "text" and "correction" must be in the Target Language (${language || 'English'}).
+- Score from 0 to 100 based on the CEFR level (don't be too harsh on a B1 student, but point out all mistakes).
 
 Respond ONLY with valid JSON in this format:
 {
   "score": 85,
   "isCorrect": false,
-  "explanation": "Brief explanation of overall quality.",
+  "explanation": "Ogólna ocena wypowiedzi w języku ${nativeLanguage || 'Polish'}.",
   "errors": [
     {
-      "text": "incorrect part",
-      "correction": "corrected part",
-      "reason": "Why it's wrong"
+      "text": "błędny fragment",
+      "correction": "poprawny fragment",
+      "reason": "Wyjaśnienie błędu po polsku."
     }
   ],
-  "correctedText": "The full corrected sentence."
+  "correctedText": "Pełne poprawione zdanie."
+}
 }
   RULES:
 - You have to answer "explanation" in json response in ${language}.

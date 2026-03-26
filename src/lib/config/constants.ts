@@ -7,9 +7,9 @@
 
 // Language and Learning Settings
 export const LanguageSettingsData = {
-	nativeLanguage: 'English',
-	foreignLanguage: 'Polish',
-	languageLevel: 'C2',
+	nativeLanguage: 'Polish',
+	foreignLanguage: 'Spanish',
+	languageLevel: 'B1',
 	options: {
 		languages: [
 			'English', 'Spanish', 'French', 'Italian', 'Portuguese', 
