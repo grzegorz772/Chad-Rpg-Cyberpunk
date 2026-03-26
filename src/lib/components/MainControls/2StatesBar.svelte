@@ -208,11 +208,6 @@
 		border-color: var(--color-border-hover);
 	}
 
-	.action-btn.secondary {
-		background: transparent;
-		border-color: rgba(255, 255, 255, 0.15);
-	}
-
 	.action-btn.leave-shop {
 		background: var(--color-bg-card);
 		backdrop-filter: blur(16px);

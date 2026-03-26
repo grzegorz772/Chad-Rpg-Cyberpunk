@@ -9,8 +9,10 @@
 	import ActionBox from './ActionBox.svelte'
 	import Choices from './Choices.svelte'
 	import BackgroundImgs from './BackgroundImgs.svelte'
+	import ApiKeyModal from './ApiKeyModal.svelte'
+	import { fetchAiChat, fetchGrammarCheck } from '$lib/services/aiService'
 
-	import { game, character, selectedItem, misc, coolDowns, bgImage, ui, languageSettings } from '../../stores'
+	import { game, character, selectedItem, misc, coolDowns, bgImage, ui, languageSettings, googleApiKey } from '../../stores'
 	import { supabase } from '$lib/supabaseClient'
 
 	import buyWeapons from '$lib/gamedata/weapons.json'
@@ -116,232 +118,78 @@ onMount(() => {
 	}
 	
 	async function checkGrammar(text: string) {
+		if (!$googleApiKey) return;
 		$gameState.grammarEvaluation = null;
 		try {
-			const res = await fetch('/api/grammar-check', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ 
-					text, 
-					language: $languageSettings.foreignLanguage,
-					languageLevel: $languageSettings.languageLevel,
-					nativeLanguage: $languageSettings.nativeLanguage
-				})
+			const rawJson = await fetchGrammarCheck({
+				apiKey: $googleApiKey,
+				text,
+				language: $languageSettings.foreignLanguage,
+				languageLevel: $languageSettings.languageLevel,
+				nativeLanguage: $languageSettings.nativeLanguage
 			});
-			if (res.ok) {
-				$gameState.grammarEvaluation = await res.json();
-			}
+			// Extract JSON from possible markdown
+			const jsonMatch = rawJson.match(/\{[\s\S]*\}/);
+			$gameState.grammarEvaluation = JSON.parse(jsonMatch ? jsonMatch[0] : rawJson);
 		} catch (e) {
 			console.error('Grammar check failed:', e);
 		}
 	}
 
-	// Sentence splitting logic
-	let sentences: string[] = [];
-	let sentencesNative: string[] = [];
-	let activeSentenceIndex: number | null = null;
-	let showTranslationModal = false;
-
-	$: if ($game.gameData.story) {
-		// Split by dots but keep the dots
-		sentences = $game.gameData.story.split(/(?<=\.)\s+/);
-		if ($game.gameData.storyNative) {
-			sentencesNative = $game.gameData.storyNative.split(/(?<=\.)\s+/);
-		} else {
-			sentencesNative = [];
-		}
-	}
-
-	function handleSentenceClick(index: number) {
-		activeSentenceIndex = index;
-		showTranslationModal = true;
-	}
-
 	async function handleSubmit() {
+		if (!$googleApiKey) return;
 		$misc.loading = true
 		
-		// Zapisz wybór użytkownika
 		const userChoice = $misc.query
-		
-		// Dodaj do chatMessages (dla kompatybilności)
-		$gameState.chatMessages = [...$gameState.chatMessages, { 
-			role: 'user', 
-			content: userChoice 
-		}]
+		$gameState.chatMessages = [...$gameState.chatMessages, { role: 'user', content: userChoice }]
 
-		// --- SPRAWDZANIE GRAMATYKI (TYLKO JEŚLI TO NIE JEST POCZĄTEK GRY) ---
 		if ($gameState.chatMessages.length > 1) {
 			checkGrammar(userChoice);
 		}
 
-		const prompt = $gameState.chatMessages.length > 0 ? $misc.query : getGamePrompt()
-		console.log('Sending prompt:', prompt)
-
-		// Pobierz aktualne ustawienia językowe z store
-		const currentLang = $languageSettings
-		const language = currentLang.foreignLanguage
-		const languageLevel = currentLang.languageLevel
-		const nativeLanguage = currentLang.nativeLanguage
-
-		const controller = new AbortController()
-		const timeoutId = setTimeout(() => {
-			if ($misc.loading) {
-				$gameState.requestTimeout = true
-				$misc.loading = false
-				controller.abort()
-			}
-		}, 90000)
+		const prompt = $gameState.chatMessages.length > 1 ? $misc.query : getGamePrompt()
 
 		try {
-			const response = await fetch('/api/chat', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ 
-					prompt,
-					language,
-					languageLevel,
-					nativeLanguage,
-					chatHistory: $gameState.chatHistory,
-					player: $gameState.player
-				}),
-				signal: controller.signal
-			})
-// ... (rest of handleSubmit remains similar but ensure storyNative is handled)
+			const rawJson = await fetchAiChat({
+				apiKey: $googleApiKey,
+				prompt,
+				language: $languageSettings.foreignLanguage,
+				languageLevel: $languageSettings.languageLevel,
+				nativeLanguage: $languageSettings.nativeLanguage,
+				chatHistory: $gameState.chatHistory,
+				player: $gameState.player
+			});
 
-			clearTimeout(timeoutId)
-			$gameState.requestTimeout = false
+			const jsonMatch = rawJson.match(/\{[\s\S]*\}/);
+			const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawJson);
+			const gameData = parsed.gameData || parsed;
 
-			// Check for quota exceeded error
-			if (response.status === 429) {
-				const errorData = await response.json()
-				if (errorData.error === 'quota_exceeded') {
-					$gameState.quotaExceeded = true
-					$misc.loading = false
-					return
-				}
-			}
-
-			// Check for high demand error
-			if (response.status === 503) {
-				const errorData = await response.json()
-				if (errorData.error === 'high_demand') {
-					$gameState.highDemand = true
-					$gameState.requestTimeout = false
-					$misc.loading = false
-					return
-				}
-			}
-
-			// Check for gateway timeout (Vercel/Prod)
-			if (response.status === 504) {
-				if ($gameState.requestTimeout) return
-				$gameState.highDemand = true
-				$gameState.requestTimeout = false
-				$misc.loading = false
-				return
-			}
-
-			if (!response.ok) {
-				throw new Error(`HTTP Error: ${response.status}`)
-			}
-
-			const responseData = await response.json()
-			let gameData
-
-			// Helper to extract JSON from text that might have extra content
-			const extractJSON = (text: string): string => {
-				let cleaned = text
-					.replace(/```json\s*/g, '')
-					.replace(/```\s*/g, '')
-					.trim()
-
-				const firstBrace = cleaned.indexOf('{')
-				if (firstBrace === -1) return cleaned
-
-				let braceCount = 0
-				let lastBrace = firstBrace
-				for (let i = firstBrace; i < cleaned.length; i++) {
-					if (cleaned[i] === '{') braceCount++
-					if (cleaned[i] === '}') {
-						braceCount--
-						if (braceCount === 0) {
-							lastBrace = i
-							break
-						}
-					}
-				}
-				return cleaned.substring(firstBrace, lastBrace + 1)
-			}
-
-			try {
-				const rawText = responseData.candidates[0].content.parts[0].text
-				const jsonString = extractJSON(rawText)
-				const parsed = JSON.parse(jsonString)
-				gameData = parsed.gameData || parsed
-			} catch (error) {
-				console.error('JSON parse error, raw text:', responseData.candidates[0].content.parts[0].text)
-				throw error
-			}
-
-			console.log('Parsed gameData:', gameData)
-
-			// Preserve enemy state if forced by frontend
 			const wasInCombat = $game.gameData.event?.inCombat;
 			const currentEnemy = $game.gameData.enemy;
-
-			// Preserve enemy HP
-			let hpOfEnemy = 0
-			if ($game.gameData.enemy?.enemyHp) {
-				hpOfEnemy = $game.gameData.enemy.enemyHp
-			}
+			let hpOfEnemy = $game.gameData.enemy?.enemyHp || 0;
 
 			$game = { gameData }
 
-			// RE-APPLY FORCED COMBAT STATE IF NECESSARY
 			if (wasInCombat && !$game.gameData.event?.inCombat) {
 				$game.gameData.event.inCombat = true;
-				if (!$game.gameData.enemy || Object.keys($game.gameData.enemy).length === 0) {
-					$game.gameData.enemy = currentEnemy;
-				}
+				$game.gameData.enemy = currentEnemy;
+			}
+			if (hpOfEnemy && $game.gameData.enemy) {
+				$game.gameData.enemy.enemyHp = hpOfEnemy;
 			}
 
-			if (hpOfEnemy && $game.gameData.enemy?.enemyHp) {
-				$game.gameData.enemy.enemyHp = hpOfEnemy
-			}
-
-			if (!$game.gameData.enemy?.enemyMaxHp && $game.gameData.enemy?.enemyHp) {
-				$game.gameData.enemy.enemyMaxHp = $game.gameData.enemy.enemyHp
-			}
-
-			// ZAPISZ DO HISTORII
-			addToChatHistory(
-				userChoice,
-				gameData.story,
-				gameData.choices,
-				gameData.placeAndTime?.place || ''
-			)
+			addToChatHistory(userChoice, gameData.story, gameData.choices, gameData.placeAndTime?.place || '')
 
 			$misc.started = true
 			$misc.place = $game.gameData.placeAndTime?.place || ''
 			$misc.time = $game.gameData.placeAndTime?.time || '00:00'
-
-			$gameState.chatMessages = [...$gameState.chatMessages, { 
-				role: 'assistant', 
-				content: gameData 
-			}]
+			$gameState.chatMessages = [...$gameState.chatMessages, { role: 'assistant', content: gameData }]
 			
 		} catch (error: any) {
-			if (error.name === 'AbortError' || $gameState.requestTimeout) {
-				console.log('Request was aborted or timed out at 9s mark')
-				return
-			} else {
-				console.error('Error in handleSubmit:', error)
-				handleError(error)
-			}
+			console.error('Error in handleSubmit:', error)
+			$ui.errorWarnMsg = "AI Error: " + error.message;
 		} finally {
-			if (!$gameState.requestTimeout) {
-				$misc.loading = false
-			}
+			$misc.loading = false
 		}
 	}
 	function getGamePrompt() {
@@ -719,8 +567,9 @@ onMount(() => {
 			{/if}
 		</div>
 
-		<DescriptionWindow />
+		</DescriptionWindow />
 		<MessageWindows />
+		<ApiKeyModal />
 
 		<!-- Translation Modal -->
 		{#if showTranslationModal && activeSentenceIndex !== null}

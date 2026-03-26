@@ -239,45 +239,6 @@
 		margin: 1rem 0;
 	}
 
-	.creation-header {
-		margin-bottom: 2rem;
-	}
-
-	.header-main {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 1rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.title {
-		font-size: clamp(1.5rem, 5vw, 2.2rem);
-		font-weight: 800;
-		letter-spacing: -0.04em;
-		margin: 0;
-		background: linear-gradient(to right, #fff, #888);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-	}
-
-	.badge {
-		font-size: 0.65rem;
-		font-weight: 800;
-		padding: 0.2rem 0.8rem;
-		background: rgba(0, 242, 255, 0.1);
-		color: var(--accent-primary);
-		border-radius: 20px;
-		font-family: monospace;
-		letter-spacing: 0.05em;
-	}
-
-	.subtitle {
-		font-size: clamp(0.85rem, 2vw, 1rem);
-		color: var(--text-dim);
-		margin: 0;
-	}
-
 	/* Layout */
 	.creation-layout {
 		display: grid;
@@ -364,17 +325,6 @@
 		height: 100%;
 		object-fit: cover;
 		transition: transform 0.6s;
-	}
-
-	.avatar-label {
-		font-size: 0.7rem;
-		font-weight: 800;
-		letter-spacing: 0.1em;
-		color: var(--text-dim);
-	}
-
-	.avatar-card.active .avatar-label {
-		color: var(--accent-primary);
 	}
 
 	/* Attributes Section */

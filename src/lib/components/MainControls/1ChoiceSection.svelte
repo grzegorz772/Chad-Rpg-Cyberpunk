@@ -146,30 +146,6 @@
 		gap: 0.5rem;
 	}
 
-	.choice-btn {
-		width: 100%;
-		padding: 1rem;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 8px;
-		cursor: pointer;
-		transition: all 0.2s;
-		text-align: left;
-		color: #e0e0e0;
-		font-size: 1rem;
-	}
-
-	.choice-btn:hover:not(:disabled) {
-		background: rgba(0, 242, 255, 0.08);
-		border-color: #00f2ff;
-		transform: translateX(5px);
-	}
-
-	.choice-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
-	}
-
 	.input-controls-container {
 		display: flex;
 		align-items: center;

@@ -110,6 +110,16 @@ export const languageSettings: Writable<{
 	languageLevel: LanguageSettingsData.languageLevel
 })
 
+// API Key Store (Client-side)
+const storedKey = typeof localStorage !== 'undefined' ? localStorage.getItem('google_api_key') : '';
+export const googleApiKey = writable(storedKey || '');
+
+googleApiKey.subscribe(value => {
+	if (typeof localStorage !== 'undefined') {
+		localStorage.setItem('google_api_key', value);
+	}
+});
+
 // stores.ts
 export interface ChatHistoryEntry {
 	id: number;
